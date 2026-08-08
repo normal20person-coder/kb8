@@ -13,12 +13,12 @@ import BicycleLogo from '@/components/BicycleLogo';
 const LiveMap = dynamic(() => import('@/components/LiveMap'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[450px] lg:h-[550px] rounded-3xl bg-[#030a07] border border-emerald-500/20 flex flex-col items-center justify-center text-emerald-300/70">
-      <svg className="animate-spin h-9 w-9 text-emerald-400 mb-3 drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]" fill="none" viewBox="0 0 24 24">
+    <div className="w-full h-[450px] lg:h-[550px] rounded-2xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center text-slate-400">
+      <svg className="animate-spin h-8 w-8 text-indigo-500 mb-3" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
       </svg>
-      <span className="text-xs font-bold tracking-wider uppercase text-emerald-400">Initializing Bio-Matrix & Map Engine...</span>
+      <span className="text-sm font-medium">Initializing OpenStreetMap & Telemetry Engine...</span>
     </div>
   ),
 });
@@ -77,7 +77,7 @@ function DashboardContent({ user }: { user: User }) {
 
     const tokens = linkData.map((l) => l.token);
 
-    // Fetch latest location update row per token (using view with fallback)
+    // Fetch latest location update row per token (using view for high performance with fallback)
     let updateData: LocationPoint[] | null = null;
     const { data: viewData, error: viewError } = await supabase
       .from('latest_location_updates')
@@ -87,6 +87,7 @@ function DashboardContent({ user }: { user: User }) {
     if (!viewError && viewData) {
       updateData = viewData as LocationPoint[];
     } else {
+      // Fallback query if latest_location_updates view is not yet applied
       const { data: rawData } = await supabase
         .from('location_updates')
         .select('token, lat, lng, accuracy, ts, created_at')
@@ -229,7 +230,7 @@ function DashboardContent({ user }: { user: User }) {
   };
 
   const formatRelativeTime = (dateStr: string | null | undefined) => {
-    if (!dateStr) return 'No signal received';
+    if (!dateStr) return 'No location received';
     const diffSeconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
     if (diffSeconds < 10) return 'Just now';
     if (diffSeconds < 60) return `${diffSeconds}s ago`;
@@ -240,33 +241,28 @@ function DashboardContent({ user }: { user: User }) {
   const activeStreamsCount = Object.keys(liveLocations).length;
 
   return (
-    <div className="min-h-screen bg-[#030a07] text-emerald-50 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Top Navigation Header */}
-      <header className="border-b border-emerald-500/15 bg-[#061811]/60 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center space-x-3.5">
-            <Link href="/" className="flex items-center space-x-3.5 group">
-              <BicycleLogo containerSize="w-10 h-10" size="w-5 h-5" />
-              <div className="flex flex-col">
-                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-emerald-100 to-teal-300 bg-clip-text text-transparent">
-                  Geo Live Tracker Console
-                </span>
-                <span className="text-[10px] font-semibold text-emerald-400/70 tracking-widest uppercase -mt-0.5">
-                  Bio-Mesh Telemetry
-                </span>
-              </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+      {/* Top Header Navigation */}
+      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-lg sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3 group">
+              <BicycleLogo />
+              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                Geo Live Tracker Console
+              </span>
             </Link>
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="hidden sm:flex items-center space-x-2.5 px-3.5 py-1.5 rounded-full bg-[#072418] border border-emerald-500/30 text-xs font-semibold text-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
               <span>{user.email}</span>
             </div>
 
             <button
               onClick={handleSignOut}
-              className="px-4 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold transition-all hover:border-rose-500/50"
+              className="px-3.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-rose-500/20 hover:border-rose-500/40 hover:text-rose-300 text-xs font-semibold text-slate-300 transition-all"
             >
               Sign Out
             </button>
@@ -274,47 +270,47 @@ function DashboardContent({ user }: { user: User }) {
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-8">
-        {/* Bio Banner Bar */}
-        <div className="dew-glass-card border border-emerald-500/25 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        {/* Banner Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 shadow-xl">
           <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-              <span>Bio-Telemetry Engine Active</span>
+            <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+              <span>Real-Time Telemetry Engine Active</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Live Location Mesh Console</h1>
-            <p className="text-xs sm:text-sm text-emerald-200/65 mt-1.5 max-w-2xl leading-relaxed">
-              Real-time GPS coordinate pings stream onto the dark matrix map console as participants authorize location sharing.
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Live Location Monitoring</h1>
+            <p className="text-sm text-slate-400 mt-1">
+              Real-time GPS coordinates stream onto the map console as participants authorize location sharing.
             </p>
           </div>
 
           <button
             onClick={handleCreateLink}
             disabled={creating}
-            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 hover:from-emerald-400 hover:to-cyan-300 text-[#030a07] font-extrabold text-sm shadow-[0_0_25px_rgba(16,185,129,0.35)] transition-all hover:shadow-[0_0_35px_rgba(52,211,153,0.5)] hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shrink-0"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shrink-0"
           >
             {creating ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-[#030a07]" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span>Generating Token...</span>
+                <span>Generating...</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 4v16m8-8H4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                <span>Generate Tracking Token</span>
+                <span>Create New Tracking Link</span>
               </>
             )}
           </button>
         </div>
 
         {errorMsg && (
-          <div className="p-4.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs flex items-center space-x-3">
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-center space-x-3">
             <svg className="w-5 h-5 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -322,61 +318,61 @@ function DashboardContent({ user }: { user: User }) {
           </div>
         )}
 
-        {/* Desktop Split Layout */}
+        {/* Desktop Split View: Map (Left/Top) & Links List (Right/Bottom) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Real-Time Live Map Column */}
+          {/* Real-time Map Section */}
           <div className="lg:col-span-7 space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2.5">
-                <span>Bio-Matrix Map View</span>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-                  {activeStreamsCount} Active {activeStreamsCount === 1 ? 'Node' : 'Nodes'}
+              <h2 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2">
+                <span>Interactive Live Map</span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                  {activeStreamsCount} Active {activeStreamsCount === 1 ? 'Marker' : 'Markers'}
                 </span>
               </h2>
-              <span className="text-xs text-emerald-400/60 font-semibold uppercase tracking-wider">CartoDB Dark Matrix</span>
+              <span className="text-xs text-slate-400 font-medium">OpenStreetMap Engine</span>
             </div>
 
             <LiveMap locations={liveLocations} selectedToken={selectedToken} />
           </div>
 
-          {/* Tracking Links Management Panel */}
+          {/* Tracking Links Management List */}
           <div className="lg:col-span-5 space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2.5">
-                <span>Active Session Tokens</span>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+              <h2 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2">
+                <span>Active Tracking Links</span>
+                <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
                   {links.length}
                 </span>
               </h2>
               <button
                 onClick={fetchLinksAndLocations}
-                className="text-xs text-emerald-300/70 hover:text-emerald-200 flex items-center space-x-1 font-semibold transition-colors"
+                className="text-xs text-slate-400 hover:text-slate-200 flex items-center space-x-1 font-medium transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span>Sync Tokens</span>
+                <span>Refresh</span>
               </button>
             </div>
 
             {loadingLinks ? (
-              <div className="p-12 text-center dew-glass-card rounded-3xl border border-emerald-500/20 text-emerald-300/70">
-                <svg className="animate-spin h-7 w-7 text-emerald-400 mx-auto mb-3 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]" fill="none" viewBox="0 0 24 24">
+              <div className="p-12 text-center bg-slate-900/40 rounded-2xl border border-slate-800 text-slate-400">
+                <svg className="animate-spin h-6 w-6 text-indigo-500 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span className="text-xs font-bold tracking-wider uppercase">Loading Session Tokens...</span>
+                <span className="text-sm font-medium">Loading tracking links...</span>
               </div>
             ) : links.length === 0 ? (
-              <div className="p-10 text-center dew-glass-card rounded-3xl border border-emerald-500/20 text-emerald-300/70 space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center justify-center mx-auto shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              <div className="p-10 text-center bg-slate-900/40 rounded-2xl border border-slate-800 text-slate-400">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto mb-4">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
                 </div>
-                <h3 className="text-base font-bold text-white">No Tracking Links Created</h3>
-                <p className="text-xs text-emerald-300/60 max-w-xs mx-auto">
-                  Click "Generate Tracking Token" above to generate a participant session URL.
+                <h3 className="text-base font-bold text-white">No tracking links created</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                  Click "Create New Tracking Link" to generate a participant URL.
                 </p>
               </div>
             ) : (
@@ -391,37 +387,37 @@ function DashboardContent({ user }: { user: User }) {
                     <div
                       key={link.id}
                       onClick={() => setSelectedToken(link.token)}
-                      className={`p-5 rounded-2xl cursor-pointer transition-all duration-300 space-y-3.5 dew-glass-card ${
+                      className={`p-4 rounded-2xl bg-slate-900/80 border cursor-pointer transition-all space-y-3 shadow-lg ${
                         isSelected
-                          ? 'border-emerald-400 ring-2 ring-emerald-400/20 shadow-[0_0_25px_rgba(16,185,129,0.2)]'
-                          : 'border-emerald-500/20 hover:border-emerald-500/40'
+                          ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-slate-900'
+                          : 'border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      {/* Top Row: Token Badge & Status */}
+                      {/* Top Row: Token & Status */}
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                          Token: {link.token}
+                        <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                          {link.token}
                         </span>
 
                         {expired ? (
-                          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[11px] font-semibold">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-semibold">
                             <span>Expired</span>
                           </span>
                         ) : link.active ? (
-                          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]" />
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                             <span>Active</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-semibold">
                             <span>Paused</span>
                           </span>
                         )}
                       </div>
 
-                      {/* URL Box & Copy Trigger */}
-                      <div className="flex items-center space-x-2 bg-[#020b07] px-3.5 py-2 rounded-xl border border-emerald-500/20">
-                        <span className="text-[11px] font-mono text-emerald-200/80 truncate flex-1">
+                      {/* URL Box & Copy */}
+                      <div className="flex items-center space-x-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+                        <span className="text-[11px] font-mono text-slate-300 truncate flex-1">
                           {fullUrl}
                         </span>
 
@@ -430,45 +426,45 @@ function DashboardContent({ user }: { user: User }) {
                             e.stopPropagation();
                             handleCopyLink(link.token);
                           }}
-                          className="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[#030a07] text-[11px] font-bold transition-all shrink-0 flex items-center space-x-1 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                          className="px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold transition-all shrink-0 flex items-center space-x-1"
                         >
                           {copiedToken === link.token ? (
                             <span>Copied!</span>
                           ) : (
-                            <span>Copy Link</span>
+                            <span>Copy</span>
                           )}
                         </button>
                       </div>
 
-                      {/* Telemetry Signal Info */}
-                      <div className="flex items-center justify-between text-[11px] text-emerald-300/70">
+                      {/* Signal Telemetry status */}
+                      <div className="flex items-center justify-between text-[11px] text-slate-400">
                         <span>
-                          Last Signal: <strong className="text-emerald-100">{formatRelativeTime(link.last_update_time)}</strong>
+                          Signal: <strong className="text-slate-200">{formatRelativeTime(link.last_update_time)}</strong>
                         </span>
                         {loc && (
-                          <span className="text-emerald-400 font-mono font-bold">
+                          <span className="text-indigo-400 font-mono">
                             📍 {loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}
                           </span>
                         )}
                       </div>
 
-                      {/* Card Action Controls */}
-                      <div className="flex items-center justify-between pt-2 border-t border-emerald-500/15">
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleToggleActive(link.id, link.active);
                           }}
-                          className="text-[11px] text-emerald-400/80 hover:text-emerald-200 underline font-semibold"
+                          className="text-[11px] text-slate-400 hover:text-slate-200 underline font-medium"
                         >
-                          {link.active ? 'Pause Session' : 'Activate Session'}
+                          {link.active ? 'Deactivate Link' : 'Activate Link'}
                         </button>
 
                         <Link
                           href={`/track?token=${link.token}`}
                           target="_blank"
                           onClick={(e) => e.stopPropagation()}
-                          className="text-[11px] text-cyan-300 hover:text-cyan-200 font-bold flex items-center space-x-1"
+                          className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-1"
                         >
                           <span>Open Track Console</span>
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -485,9 +481,12 @@ function DashboardContent({ user }: { user: User }) {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-emerald-500/15 bg-[#04120c]/80 py-5 px-4 text-center text-xs text-emerald-300/50 space-y-1">
-        <p>Geo Live Tracker &bull; Bio-Mesh Consensual Location Platform</p>
+      {/* Footer & Ethics Note */}
+      <footer className="border-t border-slate-800 bg-slate-950 py-4 px-4 text-center text-xs text-slate-500 space-y-1">
+        <p>Geo Live Tracker &bull; Privacy-First Real-Time Location Platform</p>
+        <p className="text-[11px] text-slate-600">
+          End-to-End Encrypted Sessions &bull; Automatic 24-Hour Telemetry Expiration
+        </p>
       </footer>
     </div>
   );
