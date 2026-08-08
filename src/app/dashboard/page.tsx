@@ -486,9 +486,9 @@ function DashboardContent({ user }: { user: User }) {
                           : 'border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      {/* Top Row: Checkbox, Token, Participant Name & Status */}
+                      {/* Top Row: Checkbox, Token & Status */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                        <div className="flex items-center space-x-2">
                           <input
                             type="checkbox"
                             checked={isChecked}
@@ -499,12 +499,6 @@ function DashboardContent({ user }: { user: User }) {
                           <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
                             {link.token}
                           </span>
-                          {loc?.participant_name && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-200 flex items-center space-x-1">
-                              <span>👤</span>
-                              <span>{loc.participant_name}</span>
-                            </span>
-                          )}
                         </div>
 
                         {expired ? (

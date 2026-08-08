@@ -53,31 +53,25 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
     };
   }, []);
 
-  // Custom marker icon creator with participant name badge
-  const createCustomIcon = (token: string, isSelected: boolean, name?: string | null) => {
-    const displayName = name ? name : `Token: ${token.substring(0, 6)}`;
+  // Custom marker icon creator
+  const createCustomIcon = (token: string, isSelected: boolean) => {
     return L.divIcon({
       className: 'custom-location-pin',
       html: `
-        <div class="relative flex flex-col items-center justify-center">
-          <div class="px-2 py-0.5 mb-1 rounded-md bg-slate-950/90 border border-slate-700 text-white font-sans text-[10px] font-bold shadow-md whitespace-nowrap">
-            👤 ${displayName}
-          </div>
-          <div class="relative flex items-center justify-center">
-            <span class="animate-ping absolute inline-flex ${isSelected ? 'h-10 w-10 bg-cyan-400' : 'h-8 w-8 bg-indigo-400'} rounded-full opacity-75"></span>
-            <div class="relative inline-flex rounded-full ${isSelected ? 'h-8 w-8 bg-cyan-500 ring-4 ring-cyan-300/40' : 'h-7 w-7 bg-indigo-600 ring-2 ring-white'} shadow-xl items-center justify-center">
-              <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <circle cx="5.5" cy="17.5" r="3" stroke-width="2" />
-                <circle cx="18.5" cy="17.5" r="3" stroke-width="2" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 6h3m-3 0l-3 6.5M5.5 17.5l3.5-7.5h5l3.5 7.5M9 10l-2-4H4" />
-              </svg>
-            </div>
+        <div class="relative flex items-center justify-center">
+          <span class="animate-ping absolute inline-flex ${isSelected ? 'h-10 w-10 bg-cyan-400' : 'h-8 w-8 bg-indigo-400'} rounded-full opacity-75"></span>
+          <div class="relative inline-flex rounded-full ${isSelected ? 'h-8 w-8 bg-cyan-500 ring-4 ring-cyan-300/40' : 'h-7 w-7 bg-indigo-600 ring-2 ring-white'} shadow-xl items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="5.5" cy="17.5" r="3" stroke-width="2" />
+              <circle cx="18.5" cy="17.5" r="3" stroke-width="2" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 6h3m-3 0l-3 6.5M5.5 17.5l3.5-7.5h5l3.5 7.5M9 10l-2-4H4" />
+            </svg>
           </div>
         </div>
       `,
-      iconSize: [80, 55],
-      iconAnchor: [40, 45],
-      popupAnchor: [0, -45],
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      popupAnchor: [0, -18],
     });
   };
 
@@ -107,17 +101,13 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
 
       const isSelected = selectedToken === token;
       const formattedTime = new Date(loc.created_at).toLocaleTimeString();
-      const participantName = loc.participant_name || 'Anonymous Participant';
 
       const popupContent = `
         <div style="font-family: system-ui, sans-serif; padding: 4px; color: #0f172a;">
-          <div style="font-size: 13px; font-weight: 800; color: #4f46e5; margin-bottom: 2px;">
-            👤 ${participantName}
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6366f1; margin-bottom: 2px;">
+            Token: ${token.substring(0, 8)}...
           </div>
-          <div style="font-size: 10px; font-family: monospace; color: #64748b; margin-bottom: 4px;">
-            Token: ${token}
-          </div>
-          <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">
             📍 ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}
           </div>
           <div style="font-size: 11px; color: #64748b;">
@@ -131,12 +121,12 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
         // Update marker position and popup
         const marker = markersRef.current[token];
         marker.setLatLng(latLng);
-        marker.setIcon(createCustomIcon(token, isSelected, loc.participant_name));
+        marker.setIcon(createCustomIcon(token, isSelected));
         marker.getPopup()?.setContent(popupContent);
       } else {
         // Create new marker
         const marker = L.marker(latLng, {
-          icon: createCustomIcon(token, isSelected, loc.participant_name),
+          icon: createCustomIcon(token, isSelected),
         }).addTo(map);
 
         marker.bindPopup(popupContent);

@@ -22,22 +22,8 @@ function TrackContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [isSharing, setIsSharing] = useState(false);
-  const [participantName, setParticipantName] = useState('');
-  const participantNameRef = useRef(participantName);
-  participantNameRef.current = participantName;
-
   const [statusText, setStatusText] = useState('Ready to start location sharing.');
   const [statusType, setStatusType] = useState<'idle' | 'active' | 'error' | 'stopped'>('idle');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedName = localStorage.getItem('geo_participant_name');
-      if (savedName) {
-        setParticipantName(savedName);
-        participantNameRef.current = savedName;
-      }
-    }
-  }, []);
 
   const [location, setLocation] = useState<LocationState>({
     lat: null,
@@ -118,7 +104,6 @@ function TrackContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          participant_name: participantNameRef.current.trim() || 'Anonymous Participant',
           lat: coords.latitude,
           lng: coords.longitude,
           accuracy: coords.accuracy,
@@ -304,29 +289,7 @@ function TrackContent() {
           </div>
 
           {/* Controls */}
-          <div className="space-y-4">
-            <div className="text-left">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center space-x-1.5">
-                <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span>Enter Your Name / Alias</span>
-              </label>
-              <input
-                type="text"
-                value={participantName}
-                onChange={(e) => {
-                  setParticipantName(e.target.value);
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('geo_participant_name', e.target.value);
-                  }
-                }}
-                placeholder="Enter your name (e.g. John, Sarah, Unit 4)..."
-                disabled={isSharing}
-                className="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold disabled:opacity-60"
-              />
-            </div>
-
+          <div className="space-y-3">
             {!isSharing ? (
               <button
                 onClick={startSharing}
