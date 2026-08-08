@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { token, participant_name, lat, lng, accuracy, ts } = body || {};
+    const { token, lat, lng, accuracy, ts } = body || {};
 
     if (!token || lat === undefined || lng === undefined) {
       return NextResponse.json(
@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
 
     const latitude = Number(lat);
     const longitude = Number(lng);
-    const cleanParticipantName = typeof participant_name === 'string' ? participant_name.trim().substring(0, 80) : null;
 
     if (isNaN(latitude) || latitude < -90 || latitude > 90) {
       return NextResponse.json(
@@ -66,7 +65,6 @@ export async function POST(req: NextRequest) {
       .insert([
         {
           token,
-          participant_name: cleanParticipantName,
           lat: latitude,
           lng: longitude,
           accuracy: accuracy !== undefined && !isNaN(Number(accuracy)) ? Number(accuracy) : null,

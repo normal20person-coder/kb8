@@ -82,7 +82,7 @@ function DashboardContent({ user }: { user: User }) {
       let updateData: LocationPoint[] | null = null;
       const { data: viewData, error: viewError } = await supabase
         .from('latest_location_updates')
-        .select('token, participant_name, lat, lng, accuracy, ts, created_at')
+        .select('token, lat, lng, accuracy, ts, created_at')
         .in('token', tokens);
 
       if (!viewError && viewData) {
@@ -90,7 +90,7 @@ function DashboardContent({ user }: { user: User }) {
       } else {
         const { data: rawData } = await supabase
           .from('location_updates')
-          .select('token, participant_name, lat, lng, accuracy, ts, created_at')
+          .select('token, lat, lng, accuracy, ts, created_at')
           .in('token', tokens)
           .order('created_at', { ascending: false });
         updateData = rawData as LocationPoint[];
@@ -104,7 +104,6 @@ function DashboardContent({ user }: { user: User }) {
           if (!latestLocationMap[upd.token]) {
             latestLocationMap[upd.token] = {
               token: upd.token,
-              participant_name: upd.participant_name,
               lat: upd.lat,
               lng: upd.lng,
               accuracy: upd.accuracy,
