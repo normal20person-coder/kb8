@@ -192,8 +192,8 @@ function TrackContent() {
         },
         {
           enableHighAccuracy: useHighAccuracy,
-          timeout: useHighAccuracy ? 15000 : 30000,
-          maximumAge: 10000,
+          timeout: useHighAccuracy ? 10000 : 20000,
+          maximumAge: 0,
         }
       );
 
