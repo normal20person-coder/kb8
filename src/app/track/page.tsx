@@ -235,7 +235,7 @@ function TrackContent() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
-        <span className="font-bold text-base tracking-tight text-white">GeoConsent Participant Console</span>
+        <span className="font-bold text-base tracking-tight text-white">Geo Live Tracker Console</span>
       </header>
 
       {/* Main Consent & Stream Card */}
@@ -341,7 +341,7 @@ function TrackContent() {
 
       {/* Footer */}
       <footer className="w-full max-w-md py-4 text-center text-xs text-slate-500 border-t border-slate-800/80">
-        GeoConsent Telemetry &bull; Secure Real-Time Session
+        Geo Live Tracker &bull; Secure Real-Time Session
       </footer>
     </div>
   );

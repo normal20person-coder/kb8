@@ -44,7 +44,7 @@ export default function LoginPage() {
               </svg>
             </div>
             <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              GeoConsent Live
+              Geo Live Tracker
             </span>
           </Link>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-white">Owner Login</h2>

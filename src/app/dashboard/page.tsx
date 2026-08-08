@@ -240,7 +240,7 @@ function DashboardContent({ user }: { user: User }) {
                 </svg>
               </div>
               <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                GeoConsent Management Console
+                Geo Live Tracker Console
               </span>
             </Link>
           </div>
@@ -474,7 +474,7 @@ function DashboardContent({ user }: { user: User }) {
 
       {/* Footer & Ethics Note */}
       <footer className="border-t border-slate-800 bg-slate-950 py-4 px-4 text-center text-xs text-slate-500 space-y-1">
-        <p>GeoConsent Telemetry &bull; Privacy-First Real-Time Location Platform</p>
+        <p>Geo Live Tracker &bull; Privacy-First Real-Time Location Platform</p>
         <p className="text-[11px] text-slate-600">
           End-to-End Encrypted Sessions &bull; Automatic 24-Hour Telemetry Expiration
         </p>

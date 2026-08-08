@@ -14,7 +14,7 @@ export default function Home() {
               </svg>
             </div>
             <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              GeoConsent Live
+              Geo Live Tracker
             </span>
           </div>
 
@@ -115,7 +115,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
-        GeoConsent Telemetry &bull; Privacy-First Real-Time Tracking Platform &bull; End-to-End Encrypted Sessions
+        Geo Live Tracker &bull; Privacy-First Real-Time Tracking Platform &bull; End-to-End Encrypted Sessions
       </footer>
     </div>
   );
