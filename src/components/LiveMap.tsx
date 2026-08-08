@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -22,14 +22,16 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Record<string, L.Marker>>({});
+  const [autoFollow, setAutoFollow] = useState(true);
+  const hasFitInitialBounds = useRef(false);
 
   // Initialize Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Default center (e.g., college campus or central location, default London/Global center fallback)
+    // Default center (India default center fallback)
     const map = L.map(mapContainerRef.current, {
-      center: [20.5937, 78.9629], // India default center, auto-adjusts to markers
+      center: [20.5937, 78.9629],
       zoom: 4,
       zoomControl: true,
     });
@@ -131,19 +133,42 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
       }
     });
 
-    // Auto fit map bounds if we have locations
+    // Handle view auto-following
     if (bounds.length > 0) {
-      if (bounds.length === 1) {
-        map.setView(bounds[0], 15, { animate: true });
-      } else {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      if (!hasFitInitialBounds.current || autoFollow) {
+        if (selectedToken && locations[selectedToken]) {
+          const selLoc = locations[selectedToken];
+          map.setView([selLoc.lat, selLoc.lng], 16, { animate: true });
+        } else if (bounds.length === 1) {
+          map.setView(bounds[0], 15, { animate: true });
+        } else {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        }
+        hasFitInitialBounds.current = true;
       }
     }
-  }, [locations, selectedToken]);
+  }, [locations, selectedToken, autoFollow]);
 
   return (
     <div className="relative w-full h-[450px] lg:h-[550px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900">
       <div ref={mapContainerRef} className="w-full h-full z-10" />
+
+      {/* Auto-Follow Camera Overlay Control */}
+      {Object.keys(locations).length > 0 && (
+        <div className="absolute top-4 right-4 z-20">
+          <button
+            onClick={() => setAutoFollow((prev) => !prev)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold shadow-lg backdrop-blur-md transition-all flex items-center space-x-2 ${
+              autoFollow
+                ? 'bg-indigo-600/90 border-indigo-400 text-white shadow-indigo-500/20'
+                : 'bg-slate-900/90 border-slate-700 text-slate-300 hover:text-white'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${autoFollow ? 'bg-cyan-300 animate-pulse' : 'bg-slate-500'}`} />
+            <span>{autoFollow ? 'Auto-Follow: ON' : 'Auto-Follow: OFF'}</span>
+          </button>
+        </div>
+      )}
 
       {Object.keys(locations).length === 0 && (
         <div className="absolute inset-0 z-20 bg-slate-950/70 backdrop-blur-sm flex flex-col items-center justify-center text-slate-300 p-6 text-center">
@@ -162,3 +187,4 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
     </div>
   );
 }
+

@@ -34,6 +34,8 @@ function TrackContent() {
   });
 
   const watchIdRef = useRef<number | null>(null);
+  const lastSentTimeRef = useRef<number>(0);
+  const wakeLockRef = useRef<any>(null);
 
   // Validate token on mount
   useEffect(() => {
@@ -76,16 +78,26 @@ function TrackContent() {
     validateToken();
   }, [token]);
 
-  // Clean up watch on unmount
+  // Clean up watch and wake lock on unmount
   useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+      }
     };
   }, []);
 
   const sendLocationUpdate = async (coords: GeolocationCoordinates, timestamp: number) => {
+    // Throttle HTTP requests to at most once every 3 seconds to save battery and network bandwidth
+    const now = Date.now();
+    if (now - lastSentTimeRef.current < 3000) {
+      return;
+    }
+    lastSentTimeRef.current = now;
+
     try {
       const res = await fetch('/api/update-location', {
         method: 'POST',
@@ -121,11 +133,20 @@ function TrackContent() {
     }
   };
 
-  const startSharing = () => {
+  const startSharing = async () => {
     if (!navigator.geolocation) {
       setStatusText('Geolocation is not supported by your browser.');
       setStatusType('error');
       return;
+    }
+
+    // Try requesting Screen Wake Lock so screen doesn't turn off during live stream
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+      } catch (err) {
+        console.warn('Wake Lock request failed:', err);
+      }
     }
 
     setStatusText('Requesting location permission...');
@@ -186,6 +207,10 @@ function TrackContent() {
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
+    }
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
     }
     setIsSharing(false);
     setStatusText('Location sharing has been stopped.');

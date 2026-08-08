@@ -77,12 +77,24 @@ function DashboardContent({ user }: { user: User }) {
 
     const tokens = linkData.map((l) => l.token);
 
-    // Fetch latest location update row per token
-    const { data: updateData } = await supabase
-      .from('location_updates')
+    // Fetch latest location update row per token (using view for high performance with fallback)
+    let updateData: LocationPoint[] | null = null;
+    const { data: viewData, error: viewError } = await supabase
+      .from('latest_location_updates')
       .select('token, lat, lng, accuracy, ts, created_at')
-      .in('token', tokens)
-      .order('created_at', { ascending: false });
+      .in('token', tokens);
+
+    if (!viewError && viewData) {
+      updateData = viewData as LocationPoint[];
+    } else {
+      // Fallback query if latest_location_updates view is not yet applied
+      const { data: rawData } = await supabase
+        .from('location_updates')
+        .select('token, lat, lng, accuracy, ts, created_at')
+        .in('token', tokens)
+        .order('created_at', { ascending: false });
+      updateData = rawData as LocationPoint[];
+    }
 
     const latestLocationMap: Record<string, LocationPoint> = {};
     const latestTimeMap: Record<string, string> = {};
@@ -132,6 +144,7 @@ function DashboardContent({ user }: { user: User }) {
           event: 'INSERT',
           schema: 'public',
           table: 'location_updates',
+          filter: `token=in.(${tokenList.join(',')})`,
         },
         (payload) => {
           const newUpdate = payload.new as LocationPoint;

@@ -4,22 +4,19 @@ import { supabase } from '@/lib/supabaseClient';
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
 
-    let userId: string | null = null;
-    if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      userId = user?.id || null;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized: Missing authorization header' }, { status: 401 });
     }
 
-    const { owner_id } = await req.json().catch(() => ({ owner_id: null }));
-    const targetOwnerId = userId || owner_id;
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-    if (!targetOwnerId) {
-      return NextResponse.json({ error: 'Unauthorized: Missing owner_id' }, { status: 401 });
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized: Invalid or expired auth token' }, { status: 401 });
     }
 
-    // Generate random 16-character token
+    // Generate random 24-character hex token (12 bytes)
     const tokenBytes = new Uint8Array(12);
     crypto.getRandomValues(tokenBytes);
     const trackingToken = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, '0')).join('');
@@ -31,7 +28,7 @@ export async function POST(req: NextRequest) {
       .from('tracking_links')
       .insert([
         {
-          owner_id: targetOwnerId,
+          owner_id: user.id,
           token: trackingToken,
           expires_at: expiresAt,
           active: true,
@@ -49,3 +46,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err?.message || 'Server error' }, { status: 500 });
   }
 }
+

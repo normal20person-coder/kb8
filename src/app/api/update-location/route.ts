@@ -13,6 +13,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+
+    if (isNaN(latitude) || latitude < -90 || latitude > 90) {
+      return NextResponse.json(
+        { error: 'Invalid latitude coordinate. Must be between -90 and 90.' },
+        { status: 400 }
+      );
+    }
+
+    if (isNaN(longitude) || longitude < -180 || longitude > 180) {
+      return NextResponse.json(
+        { error: 'Invalid longitude coordinate. Must be between -180 and 180.' },
+        { status: 400 }
+      );
+    }
+
     // Validate token status in tracking_links
     const { data: link, error: linkError } = await supabase
       .from('tracking_links')
@@ -48,10 +65,10 @@ export async function POST(req: NextRequest) {
       .insert([
         {
           token,
-          lat: Number(lat),
-          lng: Number(lng),
-          accuracy: accuracy !== undefined ? Number(accuracy) : null,
-          ts: ts ? Number(ts) : Date.now(),
+          lat: latitude,
+          lng: longitude,
+          accuracy: accuracy !== undefined && !isNaN(Number(accuracy)) ? Number(accuracy) : null,
+          ts: ts && !isNaN(Number(ts)) ? Number(ts) : Date.now(),
         },
       ])
       .select()

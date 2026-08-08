@@ -98,3 +98,23 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.location_updates;
   END IF;
 END $$;
+
+-- 8. Create Latest Location Updates View for high-performance telemetry queries
+CREATE OR REPLACE VIEW public.latest_location_updates AS
+SELECT DISTINCT ON (token)
+    id, token, lat, lng, accuracy, ts, created_at
+FROM public.location_updates
+ORDER BY token, created_at DESC;
+
+-- 9. Function to purge location updates older than 24 hours (Automated Privacy Cleanup)
+CREATE OR REPLACE FUNCTION public.purge_expired_location_updates()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    DELETE FROM public.location_updates
+    WHERE created_at < NOW() - INTERVAL '24 hours';
+END;
+$$;
+
