@@ -221,8 +221,7 @@ function DashboardContent({ user }: { user: User }) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
+    window.location.href = '/login';
   };
 
   const isExpired = (expiresAt: string) => {
