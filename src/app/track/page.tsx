@@ -131,38 +131,55 @@ function TrackContent() {
     setStatusType('idle');
     setIsSharing(true);
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        sendLocationUpdate(position.coords, position.timestamp);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        setIsSharing(false);
-        setStatusType('error');
-
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setStatusText('Location permission was denied. Please allow location access in your browser settings.');
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setStatusText('Location information unavailable. Ensure GPS is enabled on your device.');
-            break;
-          case error.TIMEOUT:
-            setStatusText('Location request timed out. Please try again.');
-            break;
-          default:
-            setStatusText('An unknown location error occurred.');
-            break;
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
+    const requestLocationStream = (useHighAccuracy: boolean) => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
       }
-    );
 
-    watchIdRef.current = watchId;
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          sendLocationUpdate(position.coords, position.timestamp);
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+
+          if (error.code === error.TIMEOUT && useHighAccuracy) {
+            // Fall back to standard accuracy (Wi-Fi / IP location) if high accuracy times out
+            console.warn('High accuracy GPS timed out. Falling back to standard Wi-Fi/Network location...');
+            setStatusText('GPS signal low. Switching to Wi-Fi/Network location...');
+            requestLocationStream(false);
+            return;
+          }
+
+          setIsSharing(false);
+          setStatusType('error');
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              setStatusText('Location permission was denied. Please allow location access in your browser settings.');
+              break;
+            case error.POSITION_UNAVAILABLE:
+              setStatusText('Location unavailable. Ensure location/GPS services are turned on in your device settings.');
+              break;
+            case error.TIMEOUT:
+              setStatusText('Location request timed out. Please check your GPS/Wi-Fi connection and try again.');
+              break;
+            default:
+              setStatusText('An unknown location error occurred.');
+              break;
+          }
+        },
+        {
+          enableHighAccuracy: useHighAccuracy,
+          timeout: useHighAccuracy ? 15000 : 30000,
+          maximumAge: 10000,
+        }
+      );
+
+      watchIdRef.current = watchId;
+    };
+
+    requestLocationStream(true);
   };
 
   const stopSharing = () => {
