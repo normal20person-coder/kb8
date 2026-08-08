@@ -50,20 +50,20 @@ function TrackContent() {
         .single();
 
       if (error || !link) {
-        setErrorMessage('Invalid tracking link or link does not exist.');
+        setErrorMessage('Invalid tracking link or session does not exist.');
         setLoading(false);
         return;
       }
 
       if (!link.active) {
-        setErrorMessage('This tracking link has been deactivated by the owner.');
+        setErrorMessage('This tracking session has been paused or deactivated.');
         setLoading(false);
         return;
       }
 
       const isExpired = new Date(link.expires_at).getTime() < Date.now();
       if (isExpired) {
-        setErrorMessage('This tracking link has expired (24-hour limit).');
+        setErrorMessage('This tracking session link has expired.');
         setLoading(false);
         return;
       }
@@ -100,7 +100,7 @@ function TrackContent() {
 
       const data = await res.json();
       if (!res.ok) {
-        setStatusText(`Server error: ${data.error || 'Failed to sync position'}`);
+        setStatusText(`Server response: ${data.error || 'Failed to sync position'}`);
         setStatusType('error');
       } else {
         setLocation((prev) => ({
@@ -144,7 +144,6 @@ function TrackContent() {
           console.error('Geolocation error:', error);
 
           if (error.code === error.TIMEOUT && useHighAccuracy) {
-            // Fall back to standard accuracy (Wi-Fi / IP location) if high accuracy times out
             console.warn('High accuracy GPS timed out. Falling back to standard Wi-Fi/Network location...');
             setStatusText('GPS signal low. Switching to Wi-Fi/Network location...');
             requestLocationStream(false);
@@ -162,7 +161,7 @@ function TrackContent() {
               setStatusText('Location unavailable. Ensure location/GPS services are turned on in your device settings.');
               break;
             case error.TIMEOUT:
-              setStatusText('Location request timed out. Please check your GPS/Wi-Fi connection and try again.');
+              setStatusText('Location request timed out. Please check your network connection and try again.');
               break;
             default:
               setStatusText('An unknown location error occurred.');
@@ -199,7 +198,7 @@ function TrackContent() {
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-        <p className="text-sm font-medium">Validating tracking link...</p>
+        <p className="text-sm font-medium">Validating tracking session...</p>
       </div>
     );
   }
@@ -214,12 +213,12 @@ function TrackContent() {
             </svg>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Link Unavailable</h2>
+            <h2 className="text-xl font-bold text-white">Session Unavailable</h2>
             <p className="text-sm text-slate-400 mt-2">{errorMessage}</p>
           </div>
           <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-500 text-left">
-            💡 <strong>Why am I seeing this?</strong><br />
-            Tracking links are temporary demo links created for a college project. Links auto-expire after 24 hours or can be deactivated by the owner.
+            💡 <strong>Session Security Note:</strong><br />
+            Tracking links are temporary, time-bounded session links that automatically expire after 24 hours or can be paused by the session creator.
           </div>
         </div>
       </div>
@@ -236,7 +235,7 @@ function TrackContent() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
-        <span className="font-bold text-base tracking-tight text-white">GeoConsent Participant</span>
+        <span className="font-bold text-base tracking-tight text-white">GeoConsent Participant Console</span>
       </header>
 
       {/* Main Consent & Stream Card */}
@@ -245,26 +244,26 @@ function TrackContent() {
           {/* Title */}
           <div className="text-center space-y-2">
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider">
-              <span>College Project Demo</span>
+              <span>Encrypted Telemetry Session</span>
             </div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">
               Share Your Live Location
             </h1>
           </div>
 
-          {/* Ethics & Consent Notice */}
+          {/* Privacy & Consent Notice */}
           <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3 text-left">
             <div className="flex items-center space-x-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              <span>Explicit Consent Notice</span>
+              <span>Privacy & Security Terms</span>
             </div>
             <ul className="text-xs text-slate-300 space-y-2 leading-relaxed list-disc list-inside">
-              <li>Your GPS position will be sent in real-time to the project owner's live dashboard.</li>
-              <li>Tracking occurs <strong>only while this web page remains open</strong>.</li>
+              <li>Your GPS telemetry is streamed securely to the active session management console.</li>
+              <li>Location sharing occurs <strong>only while this web page remains open</strong>.</li>
               <li>You can stop sharing anytime by clicking <strong>"Stop Sharing"</strong> or closing this tab.</li>
-              <li>Data is temporary and auto-deleted after 24 hours.</li>
+              <li>Session data is temporary and automatically purged after 24 hours.</li>
             </ul>
           </div>
 
@@ -317,7 +316,7 @@ function TrackContent() {
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 text-left space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                 <span>Telemetry Status</span>
-                <span className="text-indigo-400">{location.updateCount} updates sent</span>
+                <span className="text-indigo-400">{location.updateCount} updates synced</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs font-mono">
@@ -342,7 +341,7 @@ function TrackContent() {
 
       {/* Footer */}
       <footer className="w-full max-w-md py-4 text-center text-xs text-slate-500 border-t border-slate-800/80">
-        GeoConsent Live &bull; Educational College Project
+        GeoConsent Telemetry &bull; Secure Real-Time Session
       </footer>
     </div>
   );
@@ -353,7 +352,7 @@ export default function TrackPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-          Loading track page...
+          Loading tracking session...
         </div>
       }
     >

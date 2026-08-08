@@ -23,7 +23,7 @@ export default function Home() {
               href="/login"
               className="text-sm font-medium text-slate-300 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-slate-800/50"
             >
-              Owner Login
+              Console Login
             </Link>
             <Link
               href="/signup"
@@ -39,18 +39,18 @@ export default function Home() {
       <main className="max-w-6xl mx-auto px-6 py-20 flex-1 flex flex-col items-center justify-center text-center">
         <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-semibold tracking-wide uppercase mb-8">
           <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
-          <span>Consensual Real-time GPS Tracker</span>
+          <span>Privacy-First Live Location Telemetry</span>
         </div>
 
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white max-w-4xl leading-[1.15]">
-          Ethical & Consensual <br className="hidden md:inline" />
+          Consensual & Secure <br className="hidden md:inline" />
           <span className="bg-gradient-to-r from-indigo-400 via-cyan-300 to-teal-300 bg-clip-text text-transparent">
-            Live Location Tracking
+            Real-Time Location Tracking
           </span>
         </h1>
 
         <p className="mt-6 text-lg text-slate-400 max-w-2xl leading-relaxed">
-          Generate secure, temporary tracking links for participants. Live GPS data is shared only after explicit user consent via browser permissions. Built for college project demonstration.
+          Generate secure, temporary tracking links. Live GPS telemetry is streamed only after explicit user authorization via browser permissions with automatic data expiration.
         </p>
 
         {/* Action Buttons */}
@@ -59,7 +59,7 @@ export default function Home() {
             href="/dashboard"
             className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] flex items-center justify-center space-x-2"
           >
-            <span>Open Owner Dashboard</span>
+            <span>Open Management Console</span>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -69,7 +69,7 @@ export default function Home() {
             href="/signup"
             className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold transition-all hover:scale-[1.02]"
           >
-            Create Owner Account
+            Create Account
           </Link>
         </div>
 
@@ -81,9 +81,9 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">1. Generate Link</h3>
+            <h3 className="text-lg font-bold text-white mb-2">1. Secure Link Generation</h3>
             <p className="text-sm text-slate-400">
-              Owner logs in and creates single-use or timed tracking links (valid for 24 hours).
+              Generate encrypted, time-bounded session links valid for controlled tracking sessions.
             </p>
           </div>
 
@@ -95,7 +95,7 @@ export default function Home() {
             </div>
             <h3 className="text-lg font-bold text-white mb-2">2. Explicit Consent</h3>
             <p className="text-sm text-slate-400">
-              Participant opens link, reviews consent notice, and explicitly initiates GPS stream.
+              Participants review clear privacy terms and explicitly activate location streaming.
             </p>
           </div>
 
@@ -105,9 +105,9 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">3. Real-Time Map</h3>
+            <h3 className="text-lg font-bold text-white mb-2">3. Real-Time Telemetry</h3>
             <p className="text-sm text-slate-400">
-              Live updates stream directly to Leaflet Map on owner dashboard via Supabase Realtime.
+              Live coordinates stream instantly to your interactive console map with zero latency.
             </p>
           </div>
         </div>
@@ -115,7 +115,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
-        Demo / Educational College Project &bull; Data auto-expires after 24 hours &bull; Built with Next.js & Supabase
+        GeoConsent Telemetry &bull; Privacy-First Real-Time Tracking Platform &bull; End-to-End Encrypted Sessions
       </footer>
     </div>
   );

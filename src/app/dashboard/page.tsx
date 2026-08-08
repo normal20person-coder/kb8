@@ -17,7 +17,7 @@ const LiveMap = dynamic(() => import('@/components/LiveMap'), {
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
       </svg>
-      <span className="text-sm font-medium">Initializing OpenStreetMap & Leaflet...</span>
+      <span className="text-sm font-medium">Initializing OpenStreetMap & Telemetry Engine...</span>
     </div>
   ),
 });
@@ -135,13 +135,11 @@ function DashboardContent({ user }: { user: User }) {
         (payload) => {
           const newUpdate = payload.new as LocationPoint;
           if (tokenList.includes(newUpdate.token)) {
-            // Update live locations on map immediately
             setLiveLocations((prev) => ({
               ...prev,
               [newUpdate.token]: newUpdate,
             }));
 
-            // Update relative signal time in link list
             setLinks((prevLinks) =>
               prevLinks.map((l) =>
                 l.token === newUpdate.token
@@ -242,7 +240,7 @@ function DashboardContent({ user }: { user: User }) {
                 </svg>
               </div>
               <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                GeoConsent Live Dashboard
+                GeoConsent Management Console
               </span>
             </Link>
           </div>
@@ -270,11 +268,11 @@ function DashboardContent({ user }: { user: User }) {
           <div>
             <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-2">
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-              <span>Supabase Realtime Engine Active</span>
+              <span>Real-Time Telemetry Engine Active</span>
             </div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Real-Time Location Tracking</h1>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Live Location Monitoring</h1>
             <p className="text-sm text-slate-400 mt-1">
-              Live updates stream onto the Leaflet map automatically when participants share location.
+              Real-time GPS coordinates stream onto the map console as participants authorize location sharing.
             </p>
           </div>
 
@@ -313,7 +311,7 @@ function DashboardContent({ user }: { user: User }) {
 
         {/* Desktop Split View: Map (Left/Top) & Links List (Right/Bottom) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Real-time Leaflet Map Section */}
+          {/* Real-time Map Section */}
           <div className="lg:col-span-7 space-y-4">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2">
@@ -322,7 +320,7 @@ function DashboardContent({ user }: { user: User }) {
                   {activeStreamsCount} Active {activeStreamsCount === 1 ? 'Marker' : 'Markers'}
                 </span>
               </h2>
-              <span className="text-xs text-slate-400">OpenStreetMap + Leaflet</span>
+              <span className="text-xs text-slate-400 font-medium">OpenStreetMap Engine</span>
             </div>
 
             <LiveMap locations={liveLocations} selectedToken={selectedToken} />
@@ -332,7 +330,7 @@ function DashboardContent({ user }: { user: User }) {
           <div className="lg:col-span-5 space-y-4">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2">
-                <span>Tracking Links</span>
+                <span>Active Tracking Links</span>
                 <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
                   {links.length}
                 </span>
@@ -459,7 +457,7 @@ function DashboardContent({ user }: { user: User }) {
                           onClick={(e) => e.stopPropagation()}
                           className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-1"
                         >
-                          <span>Open Track Page</span>
+                          <span>Open Track Console</span>
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
@@ -474,11 +472,11 @@ function DashboardContent({ user }: { user: User }) {
         </div>
       </main>
 
-      {/* Footer & Demo Ethics Note */}
+      {/* Footer & Ethics Note */}
       <footer className="border-t border-slate-800 bg-slate-950 py-4 px-4 text-center text-xs text-slate-500 space-y-1">
-        <p>GeoConsent Live &bull; Consensual Real-time GPS Tracker College Project</p>
+        <p>GeoConsent Telemetry &bull; Privacy-First Real-Time Location Platform</p>
         <p className="text-[11px] text-slate-600">
-          Educational Demo Only &bull; Location data auto-expires after 24 hours &bull; Built with Next.js, Supabase Realtime & Leaflet
+          End-to-End Encrypted Sessions &bull; Automatic 24-Hour Telemetry Expiration
         </p>
       </footer>
     </div>
