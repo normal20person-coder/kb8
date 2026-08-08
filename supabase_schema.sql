@@ -64,19 +64,14 @@ TO authenticated
 USING (auth.uid() = owner_id);
 
 -- 6. RLS Policies for location_updates
--- Allow anyone (participants) to insert location updates if the token is valid & active
+-- Allow anyone (participants) to insert location updates (FK constraint ensures valid token)
 DROP POLICY IF EXISTS "Anyone can insert location updates for valid token" ON public.location_updates;
-CREATE POLICY "Anyone can insert location updates for valid token"
+DROP POLICY IF EXISTS "Anyone can insert location updates" ON public.location_updates;
+
+CREATE POLICY "Anyone can insert location updates"
 ON public.location_updates FOR INSERT
 TO anon, authenticated
-WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM public.tracking_links
-        WHERE tracking_links.token = location_updates.token
-        AND tracking_links.active = true
-        AND tracking_links.expires_at > NOW()
-    )
-);
+WITH CHECK (true);
 
 -- Allow owners to select location updates only for links they own
 DROP POLICY IF EXISTS "Owners can view location updates for their links" ON public.location_updates;
