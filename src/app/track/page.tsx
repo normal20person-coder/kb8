@@ -23,13 +23,19 @@ function TrackContent() {
 
   const [isSharing, setIsSharing] = useState(false);
   const [participantName, setParticipantName] = useState('');
+  const participantNameRef = useRef(participantName);
+  participantNameRef.current = participantName;
+
   const [statusText, setStatusText] = useState('Ready to start location sharing.');
   const [statusType, setStatusType] = useState<'idle' | 'active' | 'error' | 'stopped'>('idle');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedName = localStorage.getItem('geo_participant_name');
-      if (savedName) setParticipantName(savedName);
+      if (savedName) {
+        setParticipantName(savedName);
+        participantNameRef.current = savedName;
+      }
     }
   }, []);
 
@@ -112,7 +118,7 @@ function TrackContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          participant_name: participantName.trim() || 'Anonymous Participant',
+          participant_name: participantNameRef.current.trim() || 'Anonymous Participant',
           lat: coords.latitude,
           lng: coords.longitude,
           accuracy: coords.accuracy,
@@ -315,7 +321,7 @@ function TrackContent() {
                     localStorage.setItem('geo_participant_name', e.target.value);
                   }
                 }}
-                placeholder="e.g. Alex / Rider #1"
+                placeholder="Enter your name (e.g. John, Sarah, Unit 4)..."
                 disabled={isSharing}
                 className="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold disabled:opacity-60"
               />
