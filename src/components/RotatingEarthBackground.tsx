@@ -1,9 +1,16 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
 export default function RotatingEarthBackground() {
+  const pathname = usePathname();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Do not render background on login or signup/create account pages
+  if (pathname === '/login' || pathname === '/signup') {
+    return null;
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
