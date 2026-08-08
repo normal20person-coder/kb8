@@ -18,16 +18,25 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setErrorMsg(error.message);
+      if (error) {
+        setErrorMsg(error.message);
+        setLoading(false);
+      } else if (data?.user) {
+        window.location.href = '/dashboard';
+      } else {
+        setErrorMsg('Authentication failed. Please verify your email and password.');
+        setLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Login exception:', err);
+      setErrorMsg(err?.message || 'Network error occurred during login. Please try again.');
       setLoading(false);
-    } else {
-      window.location.href = '/dashboard';
     }
   };
 

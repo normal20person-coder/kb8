@@ -56,73 +56,76 @@ function DashboardContent({ user }: { user: User }) {
     setLoadingLinks(true);
     setErrorMsg(null);
 
-    const { data: linkData, error: linkError } = await supabase
-      .from('tracking_links')
-      .select('*')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (linkError) {
-      setErrorMsg(linkError.message);
-      setLoadingLinks(false);
-      return;
-    }
-
-    if (!linkData || linkData.length === 0) {
-      setLinks([]);
-      setLiveLocations({});
-      setLoadingLinks(false);
-      return;
-    }
-
-    const tokens = linkData.map((l) => l.token);
-
-    // Fetch latest location update row per token (using view for high performance with fallback)
-    let updateData: LocationPoint[] | null = null;
-    const { data: viewData, error: viewError } = await supabase
-      .from('latest_location_updates')
-      .select('token, lat, lng, accuracy, ts, created_at')
-      .in('token', tokens);
-
-    if (!viewError && viewData) {
-      updateData = viewData as LocationPoint[];
-    } else {
-      // Fallback query if latest_location_updates view is not yet applied
-      const { data: rawData } = await supabase
-        .from('location_updates')
-        .select('token, lat, lng, accuracy, ts, created_at')
-        .in('token', tokens)
+    try {
+      const { data: linkData, error: linkError } = await supabase
+        .from('tracking_links')
+        .select('*')
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
-      updateData = rawData as LocationPoint[];
+
+      if (linkError) {
+        setErrorMsg(linkError.message);
+        return;
+      }
+
+      if (!linkData || linkData.length === 0) {
+        setLinks([]);
+        setLiveLocations({});
+        return;
+      }
+
+      const tokens = linkData.map((l) => l.token);
+
+      // Fetch latest location update row per token (using view for high performance with fallback)
+      let updateData: LocationPoint[] | null = null;
+      const { data: viewData, error: viewError } = await supabase
+        .from('latest_location_updates')
+        .select('token, lat, lng, accuracy, ts, created_at')
+        .in('token', tokens);
+
+      if (!viewError && viewData) {
+        updateData = viewData as LocationPoint[];
+      } else {
+        const { data: rawData } = await supabase
+          .from('location_updates')
+          .select('token, lat, lng, accuracy, ts, created_at')
+          .in('token', tokens)
+          .order('created_at', { ascending: false });
+        updateData = rawData as LocationPoint[];
+      }
+
+      const latestLocationMap: Record<string, LocationPoint> = {};
+      const latestTimeMap: Record<string, string> = {};
+
+      if (updateData) {
+        updateData.forEach((upd) => {
+          if (!latestLocationMap[upd.token]) {
+            latestLocationMap[upd.token] = {
+              token: upd.token,
+              lat: upd.lat,
+              lng: upd.lng,
+              accuracy: upd.accuracy,
+              ts: upd.ts,
+              created_at: upd.created_at,
+            };
+            latestTimeMap[upd.token] = upd.created_at;
+          }
+        });
+      }
+
+      const formattedLinks: TrackingLink[] = linkData.map((link) => ({
+        ...link,
+        last_update_time: latestTimeMap[link.token] || null,
+      }));
+
+      setLinks(formattedLinks);
+      setLiveLocations(latestLocationMap);
+    } catch (err: any) {
+      console.error('Error fetching dashboard links:', err);
+      setErrorMsg(err?.message || 'Unexpected error loading tracking data.');
+    } finally {
+      setLoadingLinks(false);
     }
-
-    const latestLocationMap: Record<string, LocationPoint> = {};
-    const latestTimeMap: Record<string, string> = {};
-
-    if (updateData) {
-      updateData.forEach((upd) => {
-        if (!latestLocationMap[upd.token]) {
-          latestLocationMap[upd.token] = {
-            token: upd.token,
-            lat: upd.lat,
-            lng: upd.lng,
-            accuracy: upd.accuracy,
-            ts: upd.ts,
-            created_at: upd.created_at,
-          };
-          latestTimeMap[upd.token] = upd.created_at;
-        }
-      });
-    }
-
-    const formattedLinks: TrackingLink[] = linkData.map((link) => ({
-      ...link,
-      last_update_time: latestTimeMap[link.token] || null,
-    }));
-
-    setLinks(formattedLinks);
-    setLiveLocations(latestLocationMap);
-    setLoadingLinks(false);
   }, [user.id]);
 
   useEffect(() => {
@@ -144,7 +147,6 @@ function DashboardContent({ user }: { user: User }) {
           event: 'INSERT',
           schema: 'public',
           table: 'location_updates',
-          filter: `token=in.(${tokenList.join(',')})`,
         },
         (payload) => {
           const newUpdate = payload.new as LocationPoint;
