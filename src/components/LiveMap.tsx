@@ -57,14 +57,18 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
       html: `
         <div class="relative flex items-center justify-center">
           <span class="animate-ping absolute inline-flex ${isSelected ? 'h-10 w-10 bg-cyan-400' : 'h-8 w-8 bg-indigo-400'} rounded-full opacity-75"></span>
-          <div class="relative inline-flex rounded-full ${isSelected ? 'h-7 w-7 bg-cyan-500 ring-4 ring-cyan-300/40' : 'h-6 w-6 bg-indigo-600 ring-2 ring-white'} shadow-xl items-center justify-center">
-            <div class="w-2.5 h-2.5 rounded-full bg-white"></div>
+          <div class="relative inline-flex rounded-full ${isSelected ? 'h-8 w-8 bg-cyan-500 ring-4 ring-cyan-300/40' : 'h-7 w-7 bg-indigo-600 ring-2 ring-white'} shadow-xl items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="5.5" cy="17.5" r="3" stroke-width="2" />
+              <circle cx="18.5" cy="17.5" r="3" stroke-width="2" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 6h3m-3 0l-3 6.5M5.5 17.5l3.5-7.5h5l3.5 7.5M9 10l-2-4H4" />
+            </svg>
           </div>
         </div>
       `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16],
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      popupAnchor: [0, -18],
     });
   };
 

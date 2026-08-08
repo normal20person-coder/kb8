@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import BicycleLogo from '@/components/BicycleLogo';
 
 interface LocationState {
   lat: number | null;
@@ -229,12 +230,7 @@ function TrackContent() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-between p-4 sm:p-6 font-sans selection:bg-indigo-500 selection:text-white">
       {/* Top Mobile Header */}
       <header className="w-full max-w-md py-4 flex items-center justify-center space-x-2 border-b border-slate-800/80">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center shadow-md">
-          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </div>
+        <BicycleLogo containerSize="w-8 h-8" size="w-4 h-4" />
         <span className="font-bold text-base tracking-tight text-white">Geo Live Tracker Console</span>
       </header>
 

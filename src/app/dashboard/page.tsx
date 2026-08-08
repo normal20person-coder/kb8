@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import AuthGuard from '@/components/AuthGuard';
 import { User } from '@supabase/supabase-js';
 import { LocationPoint } from '@/components/LiveMap';
+import BicycleLogo from '@/components/BicycleLogo';
 
 const LiveMap = dynamic(() => import('@/components/LiveMap'), {
   ssr: false,
@@ -233,12 +234,7 @@ function DashboardContent({ user }: { user: User }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
+              <BicycleLogo />
               <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 Geo Live Tracker Console
               </span>
