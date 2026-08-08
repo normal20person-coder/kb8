@@ -38,9 +38,11 @@ function DashboardContent({ user }: { user: User }) {
   const [links, setLinks] = useState<TrackingLink[]>([]);
   const [liveLocations, setLiveLocations] = useState<Record<string, LocationPoint>>({});
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
+  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
 
   const [loadingLinks, setLoadingLinks] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [origin, setOrigin] = useState<string>('');
@@ -221,6 +223,69 @@ function DashboardContent({ user }: { user: User }) {
     setTimeout(() => setCopiedToken(null), 2500);
   };
 
+  const toggleSelectToken = (token: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedTokens((prev) =>
+      prev.includes(token) ? prev.filter((t) => t !== token) : [...prev, token]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    let tokensToDelete = [...selectedTokens];
+    if (tokensToDelete.length === 0 && selectedToken) {
+      tokensToDelete = [selectedToken];
+    }
+
+    if (tokensToDelete.length === 0) {
+      alert('Please select or check one or more tracking links to delete.');
+      return;
+    }
+
+    const confirmMsg = `Are you sure you want to delete ${tokensToDelete.length} tracking link(s)? This action cannot be undone.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeleting(true);
+    setErrorMsg(null);
+
+    const { error } = await supabase
+      .from('tracking_links')
+      .delete()
+      .in('token', tokensToDelete);
+
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      setSelectedTokens([]);
+      setSelectedToken(null);
+      await fetchLinksAndLocations();
+    }
+
+    setDeleting(false);
+  };
+
+  const handleDeleteSingle = async (token: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this tracking link?')) return;
+
+    setDeleting(true);
+    setErrorMsg(null);
+
+    const { error } = await supabase
+      .from('tracking_links')
+      .delete()
+      .eq('token', token);
+
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      setSelectedTokens((prev) => prev.filter((t) => t !== token));
+      if (selectedToken === token) setSelectedToken(null);
+      await fetchLinksAndLocations();
+    }
+
+    setDeleting(false);
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
@@ -345,15 +410,32 @@ function DashboardContent({ user }: { user: User }) {
                   {links.length}
                 </span>
               </h2>
-              <button
-                onClick={fetchLinksAndLocations}
-                className="text-xs text-slate-400 hover:text-slate-200 flex items-center space-x-1 font-medium transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Refresh</span>
-              </button>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={fetchLinksAndLocations}
+                  className="text-xs text-slate-400 hover:text-slate-200 flex items-center space-x-1 font-medium transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Refresh</span>
+                </button>
+
+                <button
+                  onClick={handleDeleteSelected}
+                  disabled={deleting}
+                  className="text-xs text-rose-400 hover:text-rose-300 flex items-center space-x-1 font-semibold transition-colors disabled:opacity-50"
+                  title="Delete selected tracking links"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>
+                    {selectedTokens.length > 0 ? `Delete (${selectedTokens.length})` : 'Delete'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {loadingLinks ? (
@@ -381,7 +463,8 @@ function DashboardContent({ user }: { user: User }) {
                 {links.map((link) => {
                   const expired = isExpired(link.expires_at);
                   const fullUrl = `${origin}/track?token=${link.token}`;
-                  const isSelected = selectedToken === link.token;
+                  const isChecked = selectedTokens.includes(link.token);
+                  const isSelected = selectedToken === link.token || isChecked;
                   const loc = liveLocations[link.token];
 
                   return (
@@ -394,11 +477,20 @@ function DashboardContent({ user }: { user: User }) {
                           : 'border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      {/* Top Row: Token & Status */}
+                      {/* Top Row: Checkbox, Token & Status */}
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
-                          {link.token}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => toggleSelectToken(link.token, e as any)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950 accent-indigo-600 h-4 w-4 cursor-pointer"
+                          />
+                          <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                            {link.token}
+                          </span>
+                        </div>
 
                         {expired ? (
                           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-semibold">
@@ -451,15 +543,24 @@ function DashboardContent({ user }: { user: User }) {
 
                       {/* Action Buttons */}
                       <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleActive(link.id, link.active);
-                          }}
-                          className="text-[11px] text-slate-400 hover:text-slate-200 underline font-medium"
-                        >
-                          {link.active ? 'Deactivate Link' : 'Activate Link'}
-                        </button>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleActive(link.id, link.active);
+                            }}
+                            className="text-[11px] text-slate-400 hover:text-slate-200 underline font-medium"
+                          >
+                            {link.active ? 'Deactivate Link' : 'Activate Link'}
+                          </button>
+
+                          <button
+                            onClick={(e) => handleDeleteSingle(link.token, e)}
+                            className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
 
                         <Link
                           href={`/track?token=${link.token}`}
