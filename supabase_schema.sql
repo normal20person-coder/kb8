@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.tracking_links (
 CREATE TABLE IF NOT EXISTS public.location_updates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     token TEXT NOT NULL REFERENCES public.tracking_links(token) ON DELETE CASCADE,
+    participant_name TEXT,
     lat DOUBLE PRECISION NOT NULL,
     lng DOUBLE PRECISION NOT NULL,
     accuracy DOUBLE PRECISION,
@@ -122,7 +123,7 @@ END $$;
 -- 8. Create Latest Location Updates View for high-performance telemetry queries
 CREATE OR REPLACE VIEW public.latest_location_updates AS
 SELECT DISTINCT ON (token)
-    id, token, lat, lng, accuracy, ts, created_at
+    id, token, participant_name, lat, lng, accuracy, ts, created_at
 FROM public.location_updates
 ORDER BY token, created_at DESC;
 

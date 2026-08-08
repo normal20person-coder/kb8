@@ -82,7 +82,7 @@ function DashboardContent({ user }: { user: User }) {
       let updateData: LocationPoint[] | null = null;
       const { data: viewData, error: viewError } = await supabase
         .from('latest_location_updates')
-        .select('token, lat, lng, accuracy, ts, created_at')
+        .select('token, participant_name, lat, lng, accuracy, ts, created_at')
         .in('token', tokens);
 
       if (!viewError && viewData) {
@@ -90,7 +90,7 @@ function DashboardContent({ user }: { user: User }) {
       } else {
         const { data: rawData } = await supabase
           .from('location_updates')
-          .select('token, lat, lng, accuracy, ts, created_at')
+          .select('token, participant_name, lat, lng, accuracy, ts, created_at')
           .in('token', tokens)
           .order('created_at', { ascending: false });
         updateData = rawData as LocationPoint[];
@@ -104,6 +104,7 @@ function DashboardContent({ user }: { user: User }) {
           if (!latestLocationMap[upd.token]) {
             latestLocationMap[upd.token] = {
               token: upd.token,
+              participant_name: upd.participant_name,
               lat: upd.lat,
               lng: upd.lng,
               accuracy: upd.accuracy,
@@ -485,9 +486,9 @@ function DashboardContent({ user }: { user: User }) {
                           : 'border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      {/* Top Row: Checkbox, Token & Status */}
+                      {/* Top Row: Checkbox, Token, Participant Name & Status */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                           <input
                             type="checkbox"
                             checked={isChecked}
@@ -498,19 +499,25 @@ function DashboardContent({ user }: { user: User }) {
                           <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
                             {link.token}
                           </span>
+                          {loc?.participant_name && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-200 flex items-center space-x-1">
+                              <span>👤</span>
+                              <span>{loc.participant_name}</span>
+                            </span>
+                          )}
                         </div>
 
                         {expired ? (
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-semibold">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-semibold shrink-0">
                             <span>Expired</span>
                           </span>
                         ) : link.active ? (
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold shrink-0">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                             <span>Active</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-semibold">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-semibold shrink-0">
                             <span>Paused</span>
                           </span>
                         )}
@@ -537,15 +544,17 @@ function DashboardContent({ user }: { user: User }) {
                         </button>
                       </div>
 
-                      {/* Signal Telemetry status */}
+                      {/* Signal Telemetry status & Last Online Location */}
                       <div className="flex items-center justify-between text-[11px] text-slate-400">
                         <span>
-                          Signal: <strong className="text-slate-200">{formatRelativeTime(link.last_update_time)}</strong>
+                          Last Signal: <strong className="text-slate-200">{formatRelativeTime(link.last_update_time)}</strong>
                         </span>
-                        {loc && (
-                          <span className="text-indigo-400 font-mono">
+                        {loc ? (
+                          <span className="text-indigo-400 font-mono font-semibold" title="Last Known Online Location">
                             📍 {loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}
                           </span>
+                        ) : (
+                          <span className="text-slate-500 italic">No GPS signal recorded</span>
                         )}
                       </div>
 
