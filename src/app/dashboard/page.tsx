@@ -247,13 +247,17 @@ function DashboardContent({ user }: { user: User }) {
     setDeleting(true);
     setErrorMsg(null);
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('tracking_links')
       .delete()
-      .in('token', tokensToDelete);
+      .eq('owner_id', user.id)
+      .in('token', tokensToDelete)
+      .select();
 
     if (error) {
       setErrorMsg(error.message);
+    } else if (!data || data.length === 0) {
+      setErrorMsg('Deletion blocked by Supabase Row Level Security (RLS). Please copy and run the updated DELETE policy from supabase_schema.sql in your Supabase SQL Editor.');
     } else {
       setSelectedTokens([]);
       setSelectedToken(null);
@@ -270,13 +274,17 @@ function DashboardContent({ user }: { user: User }) {
     setDeleting(true);
     setErrorMsg(null);
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('tracking_links')
       .delete()
-      .eq('token', token);
+      .eq('owner_id', user.id)
+      .eq('token', token)
+      .select();
 
     if (error) {
       setErrorMsg(error.message);
+    } else if (!data || data.length === 0) {
+      setErrorMsg('Deletion blocked by Supabase Row Level Security (RLS). Please copy and run the updated DELETE policy from supabase_schema.sql in your Supabase SQL Editor.');
     } else {
       setSelectedTokens((prev) => prev.filter((t) => t !== token));
       if (selectedToken === token) setSelectedToken(null);

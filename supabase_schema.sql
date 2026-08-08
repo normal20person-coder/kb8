@@ -63,6 +63,26 @@ ON public.tracking_links FOR UPDATE
 TO authenticated
 USING (auth.uid() = owner_id);
 
+-- Allow owners to delete their tracking links
+DROP POLICY IF EXISTS "Owners can delete their tracking links" ON public.tracking_links;
+CREATE POLICY "Owners can delete their tracking links"
+ON public.tracking_links FOR DELETE
+TO authenticated
+USING (auth.uid() = owner_id);
+
+-- Allow owners to delete location updates for their links
+DROP POLICY IF EXISTS "Owners can delete location updates for their links" ON public.location_updates;
+CREATE POLICY "Owners can delete location updates for their links"
+ON public.location_updates FOR DELETE
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM public.tracking_links
+        WHERE tracking_links.token = location_updates.token
+        AND tracking_links.owner_id = auth.uid()
+    )
+);
+
 -- 6. RLS Policies for location_updates
 -- Allow anyone (participants) to insert location updates (FK constraint ensures valid token)
 DROP POLICY IF EXISTS "Anyone can insert location updates for valid token" ON public.location_updates;
