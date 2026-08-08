@@ -252,7 +252,7 @@ function TrackContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-between p-4 sm:p-6 font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-transparent text-slate-100 flex flex-col items-center justify-between p-4 sm:p-6 font-sans selection:bg-indigo-500 selection:text-white">
       {/* Top Mobile Header */}
       <header className="w-full max-w-md py-4 flex items-center justify-center space-x-2 border-b border-slate-800/80">
         <BicycleLogo containerSize="w-8 h-8" size="w-4 h-4" />

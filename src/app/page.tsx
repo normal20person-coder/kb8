@@ -3,7 +3,7 @@ import BicycleLogo from '@/components/BicycleLogo';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-transparent text-slate-100 flex flex-col justify-between font-sans selection:bg-indigo-500 selection:text-white">
       {/* Navigation Header */}
       <header className="border-b border-slate-800/80 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
