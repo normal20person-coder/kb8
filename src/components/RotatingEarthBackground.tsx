@@ -7,12 +7,8 @@ export default function RotatingEarthBackground() {
   const pathname = usePathname();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Do not render background on login or signup/create account pages
-  if (pathname === '/login' || pathname === '/signup') {
-    return null;
-  }
-
   useEffect(() => {
+    if (pathname === '/login' || pathname === '/signup') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -219,7 +215,11 @@ export default function RotatingEarthBackground() {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [pathname]);
+
+  if (pathname === '/login' || pathname === '/signup') {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-slate-950">

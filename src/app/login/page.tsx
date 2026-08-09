@@ -28,14 +28,14 @@ export default function LoginPage() {
         setErrorMsg(error.message);
         setLoading(false);
       } else if (data?.user) {
-        window.location.href = '/dashboard';
+        router.push('/dashboard');
       } else {
         setErrorMsg('Authentication failed. Please verify your email and password.');
         setLoading(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login exception:', err);
-      setErrorMsg(err?.message || 'Network error occurred during login. Please try again.');
+      setErrorMsg((err as Error)?.message || 'Network error occurred during login. Please try again.');
       setLoading(false);
     }
   };
@@ -115,7 +115,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center text-sm text-slate-400">
-            Don't have an account yet?{' '}
+            Don&apos;t have an account yet?{' '}
             <Link href="/signup" className="font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
               Create an account
             </Link>

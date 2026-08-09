@@ -44,7 +44,7 @@ export default function SignupPage() {
     } else {
       if (data.session) {
         // Logged in automatically
-        window.location.href = '/dashboard';
+        router.push('/dashboard');
       } else {
         // Confirmation email might be required
         setSuccessMsg('Account created successfully! You can now log in with your credentials.');

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { token, lat, lng, accuracy, ts } = body || {};
+    const { token, lat, lng, accuracy, speed, heading, battery_level, is_sos, ts } = body || {};
 
     if (!token || lat === undefined || lng === undefined) {
       return NextResponse.json(
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const isExpired = new Date(link.expires_at).getTime() < Date.now();
     if (isExpired) {
       return NextResponse.json(
-        { error: 'This tracking link has expired (valid for 24 hours).' },
+        { error: 'This tracking link has expired.' },
         { status: 410 }
       );
     }
@@ -68,6 +68,10 @@ export async function POST(req: NextRequest) {
           lat: latitude,
           lng: longitude,
           accuracy: accuracy !== undefined && !isNaN(Number(accuracy)) ? Number(accuracy) : null,
+          speed: speed !== undefined && !isNaN(Number(speed)) ? Number(speed) : null,
+          heading: heading !== undefined && !isNaN(Number(heading)) ? Number(heading) : null,
+          battery_level: battery_level !== undefined && !isNaN(Number(battery_level)) ? Number(battery_level) : null,
+          is_sos: Boolean(is_sos),
           ts: ts && !isNaN(Number(ts)) ? Number(ts) : Date.now(),
         },
       ])
@@ -80,10 +84,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, id: updateRecord.id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Unexpected error in /api/update-location:', err);
     return NextResponse.json(
-      { error: err?.message || 'Internal server error' },
+      { error: (err as Error)?.message || 'Internal server error' },
       { status: 500 }
     );
   }

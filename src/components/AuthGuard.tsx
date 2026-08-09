@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 
@@ -11,6 +12,8 @@ interface AuthGuardProps {
 export default function AuthGuard({ children }: AuthGuardProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     let isMounted = true;
@@ -21,8 +24,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         if (!isMounted) return;
 
         if (error || !user) {
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
+          if (pathname !== '/login') {
+            router.push('/login');
           }
         } else {
           setUser(user);
@@ -30,8 +33,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         }
       } catch (err) {
         console.error('AuthGuard verification error:', err);
-        if (isMounted && window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        if (isMounted && pathname !== '/login') {
+          router.push('/login');
         }
       }
     };
@@ -43,8 +46,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
       if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        if (pathname !== '/login') {
+          router.push('/login');
         }
       } else if (session?.user) {
         setUser(session.user);
@@ -56,7 +59,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       isMounted = false;
       authListener?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [router, pathname]);
 
   if (loading) {
     return (

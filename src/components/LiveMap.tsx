@@ -7,30 +7,39 @@ import 'leaflet/dist/leaflet.css';
 export interface LocationPoint {
   token: string;
   participant_name?: string | null;
+  label?: string | null;
   lat: number;
   lng: number;
   accuracy?: number | null;
+  speed?: number | null;
+  heading?: number | null;
+  battery_level?: number | null;
+  is_sos?: boolean;
   ts?: number;
   created_at: string;
 }
 
 interface LiveMapProps {
   locations: Record<string, LocationPoint>;
+  history?: Record<string, LocationPoint[]>;
   selectedToken?: string | null;
 }
 
-export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
+export default function LiveMap({ locations, history = {}, selectedToken }: LiveMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Record<string, L.Marker>>({});
+  const polylinesRef = useRef<Record<string, L.Polyline>>({});
+
   const [autoFollow, setAutoFollow] = useState(true);
+  const [showTrails, setShowTrails] = useState(true);
   const hasFitInitialBounds = useRef(false);
 
   // Initialize Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Default center (India default center fallback)
+    // Default center (World/India center fallback)
     const map = L.map(mapContainerRef.current, {
       center: [20.5937, 78.9629],
       zoom: 4,
@@ -54,7 +63,24 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
   }, []);
 
   // Custom marker icon creator
-  const createCustomIcon = (token: string, isSelected: boolean) => {
+  const createCustomIcon = (token: string, isSelected: boolean, isSos?: boolean) => {
+    if (isSos) {
+      return L.divIcon({
+        className: 'custom-location-pin-sos',
+        html: `
+          <div class="relative flex items-center justify-center">
+            <span class="animate-ping absolute inline-flex h-12 w-12 bg-rose-500 rounded-full opacity-90"></span>
+            <div class="relative inline-flex rounded-full h-9 w-9 bg-rose-600 ring-4 ring-rose-300 text-white font-extrabold text-[11px] shadow-2xl items-center justify-center animate-bounce">
+              SOS
+            </div>
+          </div>
+        `,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+        popupAnchor: [0, -22],
+      });
+    }
+
     return L.divIcon({
       className: 'custom-location-pin',
       html: `
@@ -75,18 +101,25 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
     });
   };
 
-  // Update markers when locations prop changes
+  // Update markers and movement polylines when locations/history change
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
     const currentTokens = Object.keys(locations);
 
-    // Remove old markers for tokens no longer present
+    // Remove old markers & lines for tokens no longer present
     Object.keys(markersRef.current).forEach((token) => {
       if (!locations[token]) {
         map.removeLayer(markersRef.current[token]);
         delete markersRef.current[token];
+      }
+    });
+
+    Object.keys(polylinesRef.current).forEach((token) => {
+      if (!locations[token] || !showTrails) {
+        map.removeLayer(polylinesRef.current[token]);
+        delete polylinesRef.current[token];
       }
     });
 
@@ -101,32 +134,60 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
 
       const isSelected = selectedToken === token;
       const formattedTime = new Date(loc.created_at).toLocaleTimeString();
+      const speedKmh = loc.speed !== undefined && loc.speed !== null ? (loc.speed * 3.6).toFixed(1) : null;
+      const battery = loc.battery_level !== undefined && loc.battery_level !== null ? Math.round(loc.battery_level * 100) : null;
+      const displayLabel = loc.label || loc.participant_name || `Token: ${token.substring(0, 8)}`;
+
+      // Render Polyline trail if history exists
+      const tokenHistory = history[token] || [];
+      if (showTrails && tokenHistory.length > 1) {
+        const polyCoords: [number, number][] = tokenHistory.map((h) => [h.lat, h.lng]);
+
+        if (polylinesRef.current[token]) {
+          polylinesRef.current[token].setLatLngs(polyCoords);
+        } else {
+          const polyline = L.polyline(polyCoords, {
+            color: loc.is_sos ? '#f43f5e' : isSelected ? '#06b6d4' : '#6366f1',
+            weight: 4,
+            opacity: 0.8,
+            dashArray: '8, 8',
+          }).addTo(map);
+          polylinesRef.current[token] = polyline;
+        }
+      }
+
+      const sosBadgeHtml = loc.is_sos
+        ? `<div style="background-color: #ffe4e6; border: 1px solid #f43f5e; color: #e11d48; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 4px; animation: pulse 1s infinite;">
+            🚨 EMERGENCY SOS ACTIVE
+           </div>`
+        : '';
 
       const popupContent = `
-        <div style="font-family: system-ui, sans-serif; padding: 4px; color: #0f172a;">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6366f1; margin-bottom: 2px;">
-            Token: ${token.substring(0, 8)}...
+        <div style="font-family: system-ui, sans-serif; padding: 4px; color: #0f172a; min-width: 170px;">
+          ${sosBadgeHtml}
+          <div style="font-size: 12px; font-weight: 800; color: #4338ca; margin-bottom: 2px;">
+            👤 ${displayLabel}
           </div>
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 4px; color: #0f172a;">
             📍 ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}
           </div>
-          <div style="font-size: 11px; color: #64748b;">
-            Accuracy: ±${loc.accuracy ? Math.round(loc.accuracy) : '?'}m<br/>
-            Last signal: <strong>${formattedTime}</strong>
+          <div style="font-size: 11px; color: #475569; line-height: 1.4;">
+            ${speedKmh !== null ? `🚀 Speed: <strong>${speedKmh} km/h</strong><br/>` : ''}
+            ${battery !== null ? `🔋 Battery: <strong>${battery}%</strong><br/>` : ''}
+            🎯 Accuracy: ±${loc.accuracy ? Math.round(loc.accuracy) : '?'}m<br/>
+            🕒 Last signal: <strong>${formattedTime}</strong>
           </div>
         </div>
       `;
 
       if (markersRef.current[token]) {
-        // Update marker position and popup
         const marker = markersRef.current[token];
         marker.setLatLng(latLng);
-        marker.setIcon(createCustomIcon(token, isSelected));
+        marker.setIcon(createCustomIcon(token, isSelected, loc.is_sos));
         marker.getPopup()?.setContent(popupContent);
       } else {
-        // Create new marker
         const marker = L.marker(latLng, {
-          icon: createCustomIcon(token, isSelected),
+          icon: createCustomIcon(token, isSelected, loc.is_sos),
         }).addTo(map);
 
         marker.bindPopup(popupContent);
@@ -134,7 +195,7 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
       }
     });
 
-    // Handle view auto-following
+    // Camera Auto-Following
     if (bounds.length > 0) {
       if (!hasFitInitialBounds.current || autoFollow) {
         if (selectedToken && locations[selectedToken]) {
@@ -148,15 +209,26 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
         hasFitInitialBounds.current = true;
       }
     }
-  }, [locations, selectedToken, autoFollow]);
+  }, [locations, history, selectedToken, autoFollow, showTrails]);
 
   return (
     <div className="relative w-full h-[450px] lg:h-[550px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900">
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
-      {/* Auto-Follow Camera Overlay Control */}
+      {/* Map Control Bar Overlay */}
       {Object.keys(locations).length > 0 && (
-        <div className="absolute top-4 right-4 z-20">
+        <div className="absolute top-4 right-4 z-20 flex items-center space-x-2">
+          <button
+            onClick={() => setShowTrails((prev) => !prev)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold shadow-lg backdrop-blur-md transition-all flex items-center space-x-1.5 ${
+              showTrails
+                ? 'bg-indigo-600/90 border-indigo-400 text-white'
+                : 'bg-slate-900/90 border-slate-700 text-slate-400 hover:text-white'
+            }`}
+          >
+            <span>📈 Trails: {showTrails ? 'ON' : 'OFF'}</span>
+          </button>
+
           <button
             onClick={() => setAutoFollow((prev) => !prev)}
             className={`px-3 py-1.5 rounded-xl border text-xs font-semibold shadow-lg backdrop-blur-md transition-all flex items-center space-x-2 ${
@@ -188,4 +260,5 @@ export default function LiveMap({ locations, selectedToken }: LiveMapProps) {
     </div>
   );
 }
+
 

@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS public.tracking_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     token TEXT NOT NULL UNIQUE,
+    label TEXT,
+    emergency_contact TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE
@@ -20,6 +22,10 @@ CREATE TABLE IF NOT EXISTS public.location_updates (
     lat DOUBLE PRECISION NOT NULL,
     lng DOUBLE PRECISION NOT NULL,
     accuracy DOUBLE PRECISION,
+    speed DOUBLE PRECISION,
+    heading DOUBLE PRECISION,
+    battery_level DOUBLE PRECISION,
+    is_sos BOOLEAN NOT NULL DEFAULT FALSE,
     ts BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -122,7 +128,7 @@ END $$;
 -- 8. Create Latest Location Updates View for high-performance telemetry queries
 CREATE OR REPLACE VIEW public.latest_location_updates AS
 SELECT DISTINCT ON (token)
-    id, token, lat, lng, accuracy, ts, created_at
+    id, token, lat, lng, accuracy, speed, heading, battery_level, is_sos, ts, created_at
 FROM public.location_updates
 ORDER BY token, created_at DESC;
 
