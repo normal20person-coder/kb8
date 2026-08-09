@@ -12,12 +12,6 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Profile metadata fields
-  const [fullName, setFullName] = useState('');
-  const [bloodGroup, setBloodGroup] = useState('O+');
-  const [emergencyContact, setEmergencyContact] = useState('');
-  const [address, setAddress] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -40,52 +34,15 @@ export default function SignupPage() {
       return;
     }
 
-    if (!fullName.trim()) {
-      setErrorMsg('Please enter your Full Name.');
-      setLoading(false);
-      return;
-    }
-
-    if (!emergencyContact.trim()) {
-      setErrorMsg('Please enter your Family / Emergency Contact Phone Number.');
-      setLoading(false);
-      return;
-    }
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName.trim(),
-          blood_group: bloodGroup,
-          emergency_contact: emergencyContact.trim(),
-          address: address.trim() || null,
-        },
-      },
     });
 
     if (error) {
       setErrorMsg(error.message);
       setLoading(false);
     } else {
-      if (data.user) {
-        // Attempt creating profile entry in user_profiles table
-        try {
-          await supabase.from('user_profiles').insert([
-            {
-              id: data.user.id,
-              full_name: fullName.trim(),
-              blood_group: bloodGroup,
-              emergency_contact: emergencyContact.trim(),
-              address: address.trim() || null,
-            },
-          ]);
-        } catch (profileErr) {
-          console.warn('Profile table insert warning:', profileErr);
-        }
-      }
-
       if (data.session) {
         router.push('/dashboard');
       } else {
@@ -97,7 +54,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-8 font-sans selection:bg-indigo-500 selection:text-white">
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-md">
         {/* Header Branding */}
         <div className="text-center mb-6">
           <Link href="/" className="inline-flex items-center space-x-3 group">
@@ -106,8 +63,8 @@ export default function SignupPage() {
               Geo Live Tracker
             </span>
           </Link>
-          <h2 className="mt-3 text-2xl font-bold tracking-tight text-white">Create Emergency SOS Account</h2>
-          <p className="mt-1 text-xs text-slate-400">Register your emergency contact & medical profile for instant dialing & tracking</p>
+          <h2 className="mt-3 text-2xl font-bold tracking-tight text-white">Create Owner Account</h2>
+          <p className="mt-1 text-xs text-slate-400">Register your owner account to manage live tracking links and monitor participants</p>
         </div>
 
         {/* Form Card */}
@@ -136,125 +93,46 @@ export default function SignupPage() {
           )}
 
           <form onSubmit={handleSignup} className="space-y-4">
-            {/* Personal Details Group */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-3">
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider block">
-                👤 Personal & Medical Information
-              </span>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Full Name <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Blood Group <span className="text-rose-400">*</span>
-                  </label>
-                  <select
-                    value={bloodGroup}
-                    onChange={(e) => setBloodGroup(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
-                  >
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                    <option value="O+">O+ (Universal)</option>
-                    <option value="O-">O-</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Family/Emergency Phone <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={emergencyContact}
-                    onChange={(e) => setEmergencyContact(e.target.value)}
-                    placeholder="e.g. +1234567890"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Home Address (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. 124 Main Street, City"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Email Address <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="owner@example.com"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+              />
             </div>
 
-            {/* Account Credentials Group */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-3">
-              <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">
-                🔐 Login Credentials
-              </span>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Password <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+              />
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Email Address <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@example.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Password <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Confirm Password <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Confirm Password <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+              />
             </div>
 
             <button
@@ -268,10 +146,10 @@ export default function SignupPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span>Saving profile & creating account...</span>
+                  <span>Creating account...</span>
                 </>
               ) : (
-                <span>Register Emergency SOS Profile</span>
+                <span>Register Owner Console Account</span>
               )}
             </button>
           </form>
@@ -287,4 +165,3 @@ export default function SignupPage() {
     </div>
   );
 }
-

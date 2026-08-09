@@ -46,18 +46,8 @@ function DashboardContent({ user }: { user: User }) {
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
 
-  // User metadata from auth
-  const userMetaData = user?.user_metadata || {};
-  const userFullName = userMetaData.full_name || 'Emergency User';
-  const userBloodGroup = userMetaData.blood_group || 'O+';
-  const userEmergencyContact = userMetaData.emergency_contact || '';
-  const userAddress = userMetaData.address || '';
-
-  // Form Inputs
-  const [newLabel, setNewLabel] = useState(userFullName);
-  const [newBloodGroup, setNewBloodGroup] = useState(userBloodGroup);
-  const [newEmergencyContact, setNewEmergencyContact] = useState(userEmergencyContact);
-  const [newAddress, setNewAddress] = useState(userAddress);
+  // Link Creation Inputs
+  const [newLabel, setNewLabel] = useState('');
   const [newExpirationHours, setNewExpirationHours] = useState('24');
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -134,7 +124,7 @@ function DashboardContent({ user }: { user: User }) {
         }
       }
 
-      // Fetch raw location update history (last 50 points per token) for breadcrumb polylines
+      // Fetch raw location update history for breadcrumb polylines
       let historyData: LocationPoint[] | null = null;
       const { data: fullHistory, error: historyError } = await supabase
         .from('location_updates')
@@ -196,7 +186,6 @@ function DashboardContent({ user }: { user: User }) {
   }, [user.id]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLinksAndLocations();
   }, [fetchLinksAndLocations]);
 
@@ -249,6 +238,33 @@ function DashboardContent({ user }: { user: User }) {
     };
   }, [tokenList, links]);
 
+  // Supabase Realtime Subscription for tracking_links table updates (when participant fills out info)
+  useEffect(() => {
+    const linkChannel = supabase
+      .channel('dashboard_link_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tracking_links',
+        },
+        (payload) => {
+          const updatedLink = payload.new as TrackingLink;
+          if (updatedLink.owner_id === user.id) {
+            setLinks((prevLinks) =>
+              prevLinks.map((l) => (l.id === updatedLink.id ? { ...l, ...updatedLink } : l))
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(linkChannel);
+    };
+  }, [user.id]);
+
   const handleCreateLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
@@ -265,9 +281,6 @@ function DashboardContent({ user }: { user: User }) {
         owner_id: user.id,
         token: token,
         label: newLabel.trim() || null,
-        blood_group: newBloodGroup || null,
-        emergency_contact: newEmergencyContact.trim() || null,
-        address: newAddress.trim() || null,
         expires_at: expiresAt,
         active: true,
       },
@@ -289,7 +302,6 @@ function DashboardContent({ user }: { user: User }) {
       setErrorMsg(error.message);
     } else {
       setNewLabel('');
-      setNewEmergencyContact('');
       setShowCreateForm(false);
       await fetchLinksAndLocations();
     }
@@ -491,7 +503,7 @@ ${gpxPoints}
   const activeStreamsCount = Object.keys(liveLocations).length;
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       {/* QR Code Modal Component */}
       <QRCodeModal
         isOpen={qrModalOpen}
@@ -513,15 +525,9 @@ ${gpxPoints}
           </div>
 
           <div className="flex items-center space-x-3">
-            <div className="hidden md:flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
-              <span className="font-bold">👤 {userFullName}</span>
-              <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-extrabold text-[11px]">🩸 {userBloodGroup}</span>
-              {userEmergencyContact && <span className="text-slate-400 font-mono">📞 {userEmergencyContact}</span>}
-            </div>
-
-            <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
+            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>{user.email}</span>
+              <span>Owner: {user.email}</span>
             </div>
 
             <button
@@ -559,8 +565,8 @@ ${gpxPoints}
                 </h3>
                 <p className="text-xs text-rose-100 font-mono mt-0.5">
                   Location: {activeSosPoint.lat.toFixed(5)}, {activeSosPoint.lng.toFixed(5)}
-                  {(activeSosLink?.address || activeSosPoint.address) ? ` • Address: ${activeSosLink?.address || activeSosPoint.address}` : ''}
-                  {' • '}Signal: {new Date(activeSosPoint.created_at).toLocaleTimeString()}
+                  {activeSosLink?.emergency_contact ? ` • Contact Phone: ${activeSosLink.emergency_contact}` : ''}
+                  {(activeSosLink?.address || activeSosPoint.address) ? ` • Address/Notes: ${activeSosLink?.address || activeSosPoint.address}` : ''}
                 </p>
               </div>
             </div>
@@ -571,7 +577,7 @@ ${gpxPoints}
                   href={`tel:${activeSosLink.emergency_contact}`}
                   className="px-4 py-2.5 rounded-xl bg-white text-rose-700 hover:bg-slate-100 font-black text-xs uppercase tracking-wider shadow-lg flex items-center space-x-1.5"
                 >
-                  <span>📞 Call Contact ({activeSosLink.emergency_contact})</span>
+                  <span>📞 Call Participant ({activeSosLink.emergency_contact})</span>
                 </a>
               )}
             </div>
@@ -583,11 +589,11 @@ ${gpxPoints}
           <div>
             <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-2">
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-              <span>Real-Time Telemetry Engine Active</span>
+              <span>Owner Desktop Telemetry Console</span>
             </div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">Live Location Monitoring</h1>
             <p className="text-sm text-slate-400 mt-1">
-              Real-time GPS coordinates stream onto the map console as participants authorize location sharing.
+              Generate links for users/participants. When they open the link, their name, contact details, and live GPS coordinates display here.
             </p>
           </div>
 
@@ -610,19 +616,19 @@ ${gpxPoints}
           >
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center space-x-2">
-                <span>Configure New Tracking Link</span>
+                <span>Generate Tracking Link for User</span>
               </h3>
               <span className="text-xs text-indigo-400 font-medium">Temporary Consent Link</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Participant / Label Name
+                  Optional Link Name / Session Label
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. John Doe, Rider #1042"
+                  placeholder="e.g. Rider #1 / Delivery Task / Field Team"
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
@@ -631,40 +637,7 @@ ${gpxPoints}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Blood Group
-                </label>
-                <select
-                  value={newBloodGroup}
-                  onChange={(e) => setNewBloodGroup(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+ (Universal)</option>
-                  <option value="O-">O-</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Emergency Phone Contact
-                </label>
-                <input
-                  type="tel"
-                  placeholder="e.g. +1234567890"
-                  value={newEmergencyContact}
-                  onChange={(e) => setNewEmergencyContact(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Session Duration
+                  Session Expiration Time
                 </label>
                 <select
                   value={newExpirationHours}
@@ -679,18 +652,9 @@ ${gpxPoints}
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Address / Location Note (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 124 Main St, City"
-                value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
-              />
-            </div>
+            <p className="text-xs text-slate-400 pt-1">
+              💡 <strong>Note:</strong> When the user opens this link on their mobile device or browser, they will be prompted to fill in their Name & Phone Number.
+            </p>
 
             <div className="flex items-center justify-end space-x-3 pt-2">
               <button
@@ -796,7 +760,7 @@ ${gpxPoints}
                 </div>
                 <h3 className="text-base font-bold text-white">No tracking links created</h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                  Click &quot;Create New Tracking Link&quot; to generate a participant URL.
+                  Click &quot;Create New Tracking Link&quot; to generate a URL to send to a user.
                 </p>
               </div>
             ) : (
@@ -810,6 +774,9 @@ ${gpxPoints}
                   const speedKmh = loc?.speed !== undefined && loc?.speed !== null ? (loc.speed * 3.6).toFixed(1) : null;
                   const batteryPct = loc?.battery_level !== undefined && loc?.battery_level !== null ? Math.round(loc.battery_level * 100) : null;
 
+                  const participantNameDisplay = link.label || 'Awaiting User Name...';
+                  const hasParticipantContact = Boolean(link.emergency_contact);
+
                   return (
                     <div
                       key={link.id}
@@ -822,7 +789,7 @@ ${gpxPoints}
                           : 'border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      {/* Top Row: Checkbox, Label & Status */}
+                      {/* Top Row: Checkbox, Participant Name & Status */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <input
@@ -836,7 +803,7 @@ ${gpxPoints}
                             className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950 accent-indigo-600 h-4 w-4 cursor-pointer"
                           />
                           <span className="font-bold text-xs px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
-                            {link.label ? link.label : `Token: ${link.token.substring(0, 8)}`}
+                            👤 {participantNameDisplay}
                           </span>
                           {loc?.is_sos && (
                             <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black animate-pulse">
@@ -860,6 +827,34 @@ ${gpxPoints}
                           </span>
                         )}
                       </div>
+
+                      {/* Participant Contact Info & Notes */}
+                      {(hasParticipantContact || link.blood_group || link.address) && (
+                        <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-[11px] space-y-1">
+                          {hasParticipantContact && (
+                            <div className="flex items-center justify-between text-slate-300">
+                              <span>Phone / Contact: <strong className="text-white font-mono">{link.emergency_contact}</strong></span>
+                              <a
+                                href={`tel:${link.emergency_contact}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-2 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold text-[10px] hover:bg-indigo-500/30"
+                              >
+                                📞 Call
+                              </a>
+                            </div>
+                          )}
+                          {link.blood_group && (
+                            <div className="text-rose-400 font-medium">
+                              Blood Group: <strong>{link.blood_group}</strong>
+                            </div>
+                          )}
+                          {link.address && (
+                            <div className="text-slate-400">
+                              Address / Notes: {link.address}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* URL Box & Copy + QR */}
                       <div className="flex items-center space-x-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
@@ -964,7 +959,7 @@ ${gpxPoints}
         </div>
       </main>
 
-      {/* Footer & Ethics Note */}
+      {/* Footer */}
       <footer className="border-t border-slate-800 bg-slate-950 py-4 px-4 text-center text-xs text-slate-500 space-y-1">
         <p>Geo Live Tracker &bull; Privacy-First Real-Time Location Platform</p>
         <p className="text-[11px] text-slate-600">

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Geo Live Tracker</string>
+    <string name="title_activity_main">Geo Live Tracker</string>
+    <string name="package_name">com.geolive.tracker</string>
+    <string name="custom_url_scheme">com.geolive.tracker</string>
+</resources>

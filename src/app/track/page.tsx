@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import BicycleLogo from '@/components/BicycleLogo';
 import { LocationPoint } from '@/components/LiveMap';
@@ -34,14 +35,20 @@ function TrackContent() {
   const [loading, setLoading] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [emergencyContact, setEmergencyContact] = useState<string | null>(null);
-  const [participantName, setParticipantName] = useState<string | null>(null);
-  const [bloodGroup, setBloodGroup] = useState<string | null>(null);
-  const [address, setAddress] = useState<string | null>(null);
+
+  // Link Participant Profile State (entered by the user opening this link)
+  const [participantName, setParticipantName] = useState<string>('');
+  const [emergencyContact, setEmergencyContact] = useState<string>('');
+  const [bloodGroup, setBloodGroup] = useState<string>('O+');
+  const [address, setAddress] = useState<string>('');
+  
+  const [showInfoForm, setShowInfoForm] = useState<boolean>(true);
+  const [savingInfo, setSavingInfo] = useState<boolean>(false);
+  const [infoSavedSuccess, setInfoSavedSuccess] = useState<boolean>(false);
 
   const [isSharing, setIsSharing] = useState(false);
   const [sosActive, setSosActive] = useState(false);
-  const [statusText, setStatusText] = useState('Ready to start location sharing.');
+  const [statusText, setStatusText] = useState('Please enter your details to start location sharing.');
   const [statusType, setStatusType] = useState<'idle' | 'active' | 'error' | 'stopped' | 'sos'>('idle');
 
   const [location, setLocation] = useState<LocationState>({
@@ -60,7 +67,7 @@ function TrackContent() {
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const currentCoordsRef = useRef<GeolocationCoordinates | null>(null);
 
-  // Validate token on mount and fetch emergency & medical profile info
+  // Validate token on mount and fetch existing link details
   useEffect(() => {
     async function validateToken() {
       if (!token) {
@@ -86,7 +93,6 @@ function TrackContent() {
         .single();
 
       if (initialError) {
-        // Fallback query if columns are not in PostgREST schema cache yet
         const { data: fallbackLink, error: fallbackError } = await supabase
           .from('tracking_links')
           .select('token, active, expires_at')
@@ -121,6 +127,12 @@ function TrackContent() {
       if (link.blood_group) setBloodGroup(link.blood_group);
       if (link.address) setAddress(link.address);
 
+      if (link.label || link.emergency_contact) {
+        setShowInfoForm(false);
+        setInfoSavedSuccess(true);
+        setStatusText('Ready to start location sharing.');
+      }
+
       setTokenValid(true);
       setLoading(false);
     }
@@ -140,10 +152,48 @@ function TrackContent() {
     };
   }, []);
 
+  const saveParticipantInfo = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!token) return;
+
+    if (!participantName.trim()) {
+      alert('Please enter your name.');
+      return;
+    }
+
+    setSavingInfo(true);
+    try {
+      const res = await fetch('/api/update-participant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          name: participantName.trim(),
+          emergency_contact: emergencyContact.trim() || null,
+          blood_group: bloodGroup || null,
+          address: address.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setInfoSavedSuccess(true);
+        setShowInfoForm(false);
+        setStatusText('Details updated. Ready to start location sharing.');
+      } else {
+        alert(data.error || 'Failed to save details');
+      }
+    } catch (err) {
+      console.error('Error saving participant info:', err);
+      alert('Failed to save details due to a network error.');
+    } finally {
+      setSavingInfo(false);
+    }
+  };
+
   const sendLocationUpdate = async (coords: GeolocationCoordinates, timestamp: number, isSosTrigger = false) => {
     currentCoordsRef.current = coords;
 
-    // Adaptive Throttling: 3 seconds when moving (speed > 0.5 m/s), 15 seconds when static, 0 for immediate SOS
     const speed = coords.speed !== null && !isNaN(coords.speed) ? coords.speed : 0;
     const minInterval = isSosTrigger ? 0 : speed > 0.5 ? 3000 : 15000;
     const now = Date.now();
@@ -153,7 +203,6 @@ function TrackContent() {
     }
     lastSentTimeRef.current = now;
 
-    // Get battery level if supported
     let batteryLevel: number | null = null;
     try {
       if ('getBattery' in navigator) {
@@ -161,7 +210,7 @@ function TrackContent() {
         batteryLevel = battery.level;
       }
     } catch {
-      // Battery API not supported or blocked
+      // Battery API not supported
     }
 
     try {
@@ -215,15 +264,13 @@ function TrackContent() {
   const handleTriggerSos = async () => {
     setSosActive(true);
 
-    // 1. Broadcast immediate SOS update to server
     if (currentCoordsRef.current) {
       await sendLocationUpdate(currentCoordsRef.current, Date.now(), true);
     }
 
-    // 2. Launch phone call dialer
     const contactToCall = emergencyContact || '911';
     const confirmCall = window.confirm(
-      `🚨 EMERGENCY SOS ACTIVATED!\n\nName: ${participantName || 'User'}\nBlood Group: ${bloodGroup || 'Not specified'}\nEmergency Contact: ${contactToCall}\n\nDo you want to dial Emergency Contact (${contactToCall}) now?`
+      `🚨 EMERGENCY SOS ACTIVATED!\n\nName: ${participantName || 'User'}\nBlood Group: ${bloodGroup || 'Not specified'}\nEmergency Contact: ${contactToCall}\n\nDo you want to dial (${contactToCall}) now?`
     );
 
     if (confirmCall) {
@@ -237,12 +284,22 @@ function TrackContent() {
       return;
     }
     const mapsUrl = `https://maps.google.com/?q=${location.lat},${location.lng}`;
-    const message = `🚨 EMERGENCY SOS ALERT!\nName: ${participantName || 'User'}\nBlood Group: ${bloodGroup || 'N/A'}\nLive GPS Location: ${mapsUrl}${address ? `\nHome Address: ${address}` : ''}`;
+    const message = `🚨 EMERGENCY SOS ALERT!\nName: ${participantName || 'User'}\nContact: ${emergencyContact || 'N/A'}\nBlood Group: ${bloodGroup || 'N/A'}\nLive GPS Location: ${mapsUrl}${address ? `\nAddress: ${address}` : ''}`;
     const smsUrl = `sms:${emergencyContact || ''}?body=${encodeURIComponent(message)}`;
     window.location.href = smsUrl;
   };
 
   const startSharing = async () => {
+    if (!participantName.trim()) {
+      setShowInfoForm(true);
+      alert('Please enter your name before sharing location.');
+      return;
+    }
+
+    if (!infoSavedSuccess) {
+      await saveParticipantInfo();
+    }
+
     if (!navigator.geolocation) {
       setStatusText('Geolocation is not supported by your browser.');
       setStatusType('error');
@@ -327,7 +384,7 @@ function TrackContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-6 text-slate-300">
+      <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-6 text-slate-300 font-sans">
         <svg className="animate-spin h-8 w-8 text-indigo-500 mb-4" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -340,7 +397,11 @@ function TrackContent() {
   if (errorMessage || !tokenValid) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-6 font-sans">
-        <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-6">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-6"
+        >
           <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
             <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -354,7 +415,7 @@ function TrackContent() {
             💡 <strong>Session Security Note:</strong><br />
             Tracking links are temporary, time-bounded session links that automatically expire or can be paused by the session creator.
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -396,55 +457,162 @@ function TrackContent() {
         )}
       </header>
 
-      {/* Main Consent & Stream Card */}
-      <main className="w-full max-w-md my-auto py-6 space-y-6">
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
+      {/* Main Content Card with 3D Motion */}
+      <main className="w-full max-w-md my-auto py-6 space-y-6 perspective-[1000px]">
+        <motion.div
+          initial={{ y: 20, opacity: 0, rotateX: 4 }}
+          animate={{ y: 0, opacity: 1, rotateX: 0 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6 transform-preserve-3d"
+        >
           {/* Title */}
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider">
-              <span>Encrypted Telemetry Session</span>
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider shadow-sm">
+              <span>Live Telemetry Session</span>
             </div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">
               Share Your Live Location
             </h1>
+            <p className="text-xs text-slate-400">
+              Please provide your details below so the link owner can identify you on their dashboard map.
+            </p>
           </div>
 
-          {/* Participant Medical & Emergency Profile Badge */}
-          {(participantName || bloodGroup || emergencyContact || address) && (
+          {/* User Details Form or Badge */}
+          {showInfoForm ? (
+            <motion.form
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              onSubmit={saveParticipantInfo}
+              className="p-4 rounded-2xl bg-slate-950 border border-indigo-500/30 space-y-3 shadow-lg"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider">
+                  👤 Your Information
+                </span>
+                {infoSavedSuccess && (
+                  <button
+                    type="button"
+                    onClick={() => setShowInfoForm(false)}
+                    className="text-[11px] text-slate-400 hover:text-white underline"
+                  >
+                    Hide Form
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Your Full Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={participantName}
+                  onChange={(e) => setParticipantName(e.target.value)}
+                  placeholder="e.g. Sarah Jenkins"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Phone / Contact No.
+                  </label>
+                  <input
+                    type="tel"
+                    value={emergencyContact}
+                    onChange={(e) => setEmergencyContact(e.target.value)}
+                    placeholder="+123456789"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Blood Group
+                  </label>
+                  <select
+                    value={bloodGroup}
+                    onChange={(e) => setBloodGroup(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Address / Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. Delivery rider #4 / Home address"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                />
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={savingInfo}
+                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center space-x-2"
+              >
+                {savingInfo ? 'Saving Details...' : 'Save Details for Owner Console'}
+              </motion.button>
+            </motion.form>
+          ) : (
             <div className="p-4 rounded-2xl bg-slate-950/90 border border-indigo-500/30 text-left space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider">
-                  👤 Emergency SOS Profile
+                  👤 Participant Profile
                 </span>
-                {bloodGroup && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-extrabold">
-                    🩸 Blood Group: {bloodGroup}
-                  </span>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowInfoForm(true)}
+                  className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 underline"
+                >
+                  Edit Info
+                </button>
               </div>
               <div className="text-xs text-slate-300 space-y-1">
-                {participantName && <p>Name: <strong className="text-white">{participantName}</strong></p>}
-                {emergencyContact && <p>Emergency Contact: <a href={`tel:${emergencyContact}`} className="text-rose-400 font-bold underline">{emergencyContact}</a></p>}
-                {address && <p className="text-slate-400">Home Address: {address}</p>}
+                <p>Name: <strong className="text-white">{participantName || 'Anonymous User'}</strong></p>
+                {emergencyContact && <p>Phone Number: <span className="text-slate-200 font-mono">{emergencyContact}</span></p>}
+                {bloodGroup && <p>Blood Group: <span className="text-rose-400 font-bold">{bloodGroup}</span></p>}
+                {address && <p className="text-slate-400">Notes: {address}</p>}
               </div>
             </div>
           )}
 
           {/* EMERGENCY SOS BUTTON BAR */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/60 via-slate-900 to-rose-950/60 border border-rose-500/30 text-center space-y-3">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleTriggerSos}
               className={`w-full py-3.5 px-6 rounded-2xl font-extrabold text-sm uppercase tracking-wider shadow-2xl transition-all flex items-center justify-center space-x-2 ${
                 sosActive
                   ? 'bg-rose-600 text-white animate-pulse ring-4 ring-rose-400/50'
-                  : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-600/30 hover:scale-[1.02]'
+                  : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-600/30'
               }`}
             >
               <svg className="w-5 h-5 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <span>{sosActive ? '🚨 SOS EMERGENCY SIGNAL ACTIVE' : '🚨 EMERGENCY SOS - INSTANT DIAL & ALERT'}</span>
-            </button>
+              <span>{sosActive ? '🚨 SOS EMERGENCY SIGNAL ACTIVE' : '🚨 EMERGENCY SOS ALERT'}</span>
+            </motion.button>
 
             {sosActive && (
               <div className="flex items-center justify-center space-x-2 text-xs">
@@ -467,15 +635,19 @@ function TrackContent() {
           {/* Controls */}
           <div className="space-y-3">
             {!isSharing ? (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={startSharing}
-                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-bold text-base shadow-xl shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center space-x-3"
+                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-bold text-base shadow-xl shadow-indigo-500/25 transition-all flex items-center justify-center space-x-3"
               >
                 <div className="w-3 h-3 rounded-full bg-white animate-ping"></div>
-                <span>Start Sharing My Location</span>
-              </button>
+                <span>Start Sharing Location</span>
+              </motion.button>
             ) : (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={stopSharing}
                 className="w-full py-4 px-6 rounded-2xl bg-slate-800 hover:bg-rose-600/80 text-slate-200 hover:text-white font-bold text-base border border-slate-700 hover:border-rose-500/50 shadow-xl transition-all flex items-center justify-center space-x-2"
               >
@@ -483,8 +655,8 @@ function TrackContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
                 </svg>
-                <span>Stop Sharing</span>
-              </button>
+                <span>Stop Sharing Location</span>
+              </motion.button>
             )}
           </div>
 
@@ -512,7 +684,11 @@ function TrackContent() {
 
           {/* Participant Live Speedometer & Telemetry */}
           {location.lat !== null && location.lng !== null && (
-            <div className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                   <span className="text-slate-500 text-[10px] uppercase font-bold block">Speed</span>
@@ -541,9 +717,9 @@ function TrackContent() {
               <div className="rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
                 <LiveMap locations={currentMapLocation} selectedToken={token} />
               </div>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </main>
 
       {/* Footer */}
@@ -558,7 +734,7 @@ export default function TrackPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 font-sans">
           Loading tracking session...
         </div>
       }
