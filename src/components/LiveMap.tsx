@@ -8,6 +8,9 @@ export interface LocationPoint {
   token: string;
   participant_name?: string | null;
   label?: string | null;
+  blood_group?: string | null;
+  emergency_contact?: string | null;
+  address?: string | null;
   lat: number;
   lng: number;
   accuracy?: number | null;
@@ -156,18 +159,29 @@ export default function LiveMap({ locations, history = {}, selectedToken }: Live
         }
       }
 
+      const bloodGroupBadge = loc.blood_group
+        ? `<span style="background-color: #ffe4e6; color: #e11d48; border: 1px solid #f43f5e; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 4px;">🩸 ${loc.blood_group}</span>`
+        : '';
+
+      const callButtonHtml = loc.emergency_contact
+        ? `<div style="margin-top: 6px;">
+            <a href="tel:${loc.emergency_contact}" style="background-color: #e11d48; color: #ffffff; text-decoration: none; font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; display: inline-block;">📞 Call (${loc.emergency_contact})</a>
+           </div>`
+        : '';
+
       const sosBadgeHtml = loc.is_sos
-        ? `<div style="background-color: #ffe4e6; border: 1px solid #f43f5e; color: #e11d48; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 4px; animation: pulse 1s infinite;">
+        ? `<div style="background-color: #ffe4e6; border: 1px solid #f43f5e; color: #e11d48; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 4px;">
             🚨 EMERGENCY SOS ACTIVE
            </div>`
         : '';
 
       const popupContent = `
-        <div style="font-family: system-ui, sans-serif; padding: 4px; color: #0f172a; min-width: 170px;">
+        <div style="font-family: system-ui, sans-serif; padding: 4px; color: #0f172a; min-width: 180px;">
           ${sosBadgeHtml}
-          <div style="font-size: 12px; font-weight: 800; color: #4338ca; margin-bottom: 2px;">
-            👤 ${displayLabel}
+          <div style="font-size: 13px; font-weight: 800; color: #4338ca; margin-bottom: 2px;">
+            👤 ${displayLabel} ${bloodGroupBadge}
           </div>
+          ${loc.address ? `<div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">🏠 ${loc.address}</div>` : ''}
           <div style="font-size: 13px; font-weight: 700; margin-bottom: 4px; color: #0f172a;">
             📍 ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}
           </div>
@@ -177,6 +191,7 @@ export default function LiveMap({ locations, history = {}, selectedToken }: Live
             🎯 Accuracy: ±${loc.accuracy ? Math.round(loc.accuracy) : '?'}m<br/>
             🕒 Last signal: <strong>${formattedTime}</strong>
           </div>
+          ${callButtonHtml}
         </div>
       `;
 

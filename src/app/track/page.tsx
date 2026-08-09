@@ -35,6 +35,9 @@ function TrackContent() {
   const [tokenValid, setTokenValid] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [emergencyContact, setEmergencyContact] = useState<string | null>(null);
+  const [participantName, setParticipantName] = useState<string | null>(null);
+  const [bloodGroup, setBloodGroup] = useState<string | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
 
   const [isSharing, setIsSharing] = useState(false);
   const [sosActive, setSosActive] = useState(false);
@@ -57,7 +60,7 @@ function TrackContent() {
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const currentCoordsRef = useRef<GeolocationCoordinates | null>(null);
 
-  // Validate token on mount and fetch emergency contact
+  // Validate token on mount and fetch emergency & medical profile info
   useEffect(() => {
     async function validateToken() {
       if (!token) {
@@ -66,16 +69,24 @@ function TrackContent() {
         return;
       }
 
-      let link: { token: string; active: boolean; expires_at: string; emergency_contact?: string | null } | null = null;
+      let link: {
+        token: string;
+        active: boolean;
+        expires_at: string;
+        label?: string | null;
+        blood_group?: string | null;
+        emergency_contact?: string | null;
+        address?: string | null;
+      } | null = null;
 
-      const { data: linkWithEmergency, error: initialError } = await supabase
+      const { data: fullLink, error: initialError } = await supabase
         .from('tracking_links')
-        .select('token, active, expires_at, emergency_contact')
+        .select('token, active, expires_at, label, blood_group, emergency_contact, address')
         .eq('token', token)
         .single();
 
       if (initialError) {
-        // Fallback query if emergency_contact column is not in PostgREST schema cache yet
+        // Fallback query if columns are not in PostgREST schema cache yet
         const { data: fallbackLink, error: fallbackError } = await supabase
           .from('tracking_links')
           .select('token, active, expires_at')
@@ -89,7 +100,7 @@ function TrackContent() {
         }
         link = fallbackLink;
       } else {
-        link = linkWithEmergency;
+        link = fullLink;
       }
 
       if (!link.active) {
@@ -105,9 +116,10 @@ function TrackContent() {
         return;
       }
 
-      if (link.emergency_contact) {
-        setEmergencyContact(link.emergency_contact);
-      }
+      if (link.emergency_contact) setEmergencyContact(link.emergency_contact);
+      if (link.label) setParticipantName(link.label);
+      if (link.blood_group) setBloodGroup(link.blood_group);
+      if (link.address) setAddress(link.address);
 
       setTokenValid(true);
       setLoading(false);
@@ -211,7 +223,7 @@ function TrackContent() {
     // 2. Launch phone call dialer
     const contactToCall = emergencyContact || '911';
     const confirmCall = window.confirm(
-      `🚨 EMERGENCY SOS ACTIVATED!\n\nAn emergency signal with your live GPS location has been sent to the console.\n\nDo you want to dial Emergency Contact (${contactToCall}) now?`
+      `🚨 EMERGENCY SOS ACTIVATED!\n\nName: ${participantName || 'User'}\nBlood Group: ${bloodGroup || 'Not specified'}\nEmergency Contact: ${contactToCall}\n\nDo you want to dial Emergency Contact (${contactToCall}) now?`
     );
 
     if (confirmCall) {
@@ -225,7 +237,7 @@ function TrackContent() {
       return;
     }
     const mapsUrl = `https://maps.google.com/?q=${location.lat},${location.lng}`;
-    const message = `EMERGENCY SOS! My live location: ${mapsUrl}`;
+    const message = `🚨 EMERGENCY SOS ALERT!\nName: ${participantName || 'User'}\nBlood Group: ${bloodGroup || 'N/A'}\nLive GPS Location: ${mapsUrl}${address ? `\nHome Address: ${address}` : ''}`;
     const smsUrl = `sms:${emergencyContact || ''}?body=${encodeURIComponent(message)}`;
     window.location.href = smsUrl;
   };
@@ -396,6 +408,27 @@ function TrackContent() {
               Share Your Live Location
             </h1>
           </div>
+
+          {/* Participant Medical & Emergency Profile Badge */}
+          {(participantName || bloodGroup || emergencyContact || address) && (
+            <div className="p-4 rounded-2xl bg-slate-950/90 border border-indigo-500/30 text-left space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider">
+                  👤 Emergency SOS Profile
+                </span>
+                {bloodGroup && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-extrabold">
+                    🩸 Blood Group: {bloodGroup}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-slate-300 space-y-1">
+                {participantName && <p>Name: <strong className="text-white">{participantName}</strong></p>}
+                {emergencyContact && <p>Emergency Contact: <a href={`tel:${emergencyContact}`} className="text-rose-400 font-bold underline">{emergencyContact}</a></p>}
+                {address && <p className="text-slate-400">Home Address: {address}</p>}
+              </div>
+            </div>
+          )}
 
           {/* EMERGENCY SOS BUTTON BAR */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/60 via-slate-900 to-rose-950/60 border border-rose-500/30 text-center space-y-3">

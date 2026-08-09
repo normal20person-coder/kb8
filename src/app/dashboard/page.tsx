@@ -29,7 +29,9 @@ interface TrackingLink {
   owner_id: string;
   token: string;
   label?: string | null;
+  blood_group?: string | null;
   emergency_contact?: string | null;
+  address?: string | null;
   created_at: string;
   expires_at: string;
   active: boolean;
@@ -44,9 +46,18 @@ function DashboardContent({ user }: { user: User }) {
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
 
+  // User metadata from auth
+  const userMetaData = user?.user_metadata || {};
+  const userFullName = userMetaData.full_name || 'Emergency User';
+  const userBloodGroup = userMetaData.blood_group || 'O+';
+  const userEmergencyContact = userMetaData.emergency_contact || '';
+  const userAddress = userMetaData.address || '';
+
   // Form Inputs
-  const [newLabel, setNewLabel] = useState('');
-  const [newEmergencyContact, setNewEmergencyContact] = useState('');
+  const [newLabel, setNewLabel] = useState(userFullName);
+  const [newBloodGroup, setNewBloodGroup] = useState(userBloodGroup);
+  const [newEmergencyContact, setNewEmergencyContact] = useState(userEmergencyContact);
+  const [newAddress, setNewAddress] = useState(userAddress);
   const [newExpirationHours, setNewExpirationHours] = useState('24');
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -254,7 +265,9 @@ function DashboardContent({ user }: { user: User }) {
         owner_id: user.id,
         token: token,
         label: newLabel.trim() || null,
+        blood_group: newBloodGroup || null,
         emergency_contact: newEmergencyContact.trim() || null,
+        address: newAddress.trim() || null,
         expires_at: expiresAt,
         active: true,
       },
@@ -499,7 +512,13 @@ ${gpxPoints}
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
+            <div className="hidden md:flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
+              <span className="font-bold">👤 {userFullName}</span>
+              <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-extrabold text-[11px]">🩸 {userBloodGroup}</span>
+              {userEmergencyContact && <span className="text-slate-400 font-mono">📞 {userEmergencyContact}</span>}
+            </div>
+
             <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
               <span>{user.email}</span>
@@ -526,30 +545,36 @@ ${gpxPoints}
               </div>
               <div>
                 <div className="flex items-center space-x-2">
-                  <span className="font-black text-sm uppercase tracking-wider bg-black/40 px-2 py-0.5 rounded">
+                  <span className="font-black text-xs uppercase tracking-wider bg-black/40 px-2 py-0.5 rounded">
                     EMERGENCY SOS ALERT
                   </span>
-                  <span className="text-xs font-bold opacity-90">
-                    Token: {activeSosPoint.token.substring(0, 8)}
-                  </span>
+                  {(activeSosLink?.blood_group || activeSosPoint.blood_group) && (
+                    <span className="bg-white text-rose-700 font-extrabold text-xs px-2 py-0.5 rounded">
+                      🩸 Blood Group: {activeSosLink?.blood_group || activeSosPoint.blood_group}
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg font-extrabold mt-1">
                   Participant &quot;{activeSosLink?.label || activeSosPoint.token.substring(0, 8)}&quot; triggered Emergency SOS!
                 </h3>
                 <p className="text-xs text-rose-100 font-mono mt-0.5">
-                  Location: {activeSosPoint.lat.toFixed(5)}, {activeSosPoint.lng.toFixed(5)} &bull; Signal: {new Date(activeSosPoint.created_at).toLocaleTimeString()}
+                  Location: {activeSosPoint.lat.toFixed(5)}, {activeSosPoint.lng.toFixed(5)}
+                  {(activeSosLink?.address || activeSosPoint.address) ? ` • Address: ${activeSosLink?.address || activeSosPoint.address}` : ''}
+                  {' • '}Signal: {new Date(activeSosPoint.created_at).toLocaleTimeString()}
                 </p>
               </div>
             </div>
 
-            {activeSosLink?.emergency_contact && (
-              <a
-                href={`tel:${activeSosLink.emergency_contact}`}
-                className="px-5 py-3 rounded-xl bg-white text-rose-700 hover:bg-slate-100 font-black text-xs uppercase tracking-wider shadow-lg shrink-0 flex items-center space-x-2"
-              >
-                <span>📞 Call Emergency Contact ({activeSosLink.emergency_contact})</span>
-              </a>
-            )}
+            <div className="flex items-center space-x-2 shrink-0">
+              {activeSosLink?.emergency_contact && (
+                <a
+                  href={`tel:${activeSosLink.emergency_contact}`}
+                  className="px-4 py-2.5 rounded-xl bg-white text-rose-700 hover:bg-slate-100 font-black text-xs uppercase tracking-wider shadow-lg flex items-center space-x-1.5"
+                >
+                  <span>📞 Call Contact ({activeSosLink.emergency_contact})</span>
+                </a>
+              )}
+            </div>
           </div>
         )}
 
@@ -590,14 +615,14 @@ ${gpxPoints}
               <span className="text-xs text-indigo-400 font-medium">Temporary Consent Link</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Participant / Label (Optional)
+                  Participant / Label Name
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Rider #1042, Alice Run"
+                  placeholder="e.g. John Doe, Rider #1042"
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
@@ -606,7 +631,27 @@ ${gpxPoints}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Emergency Phone Contact (Optional)
+                  Blood Group
+                </label>
+                <select
+                  value={newBloodGroup}
+                  onChange={(e) => setNewBloodGroup(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                  <option value="O+">O+ (Universal)</option>
+                  <option value="O-">O-</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Emergency Phone Contact
                 </label>
                 <input
                   type="tel"
@@ -632,6 +677,19 @@ ${gpxPoints}
                   <option value="168">7 Days</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Address / Location Note (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 124 Main St, City"
+                value={newAddress}
+                onChange={(e) => setNewAddress(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+              />
             </div>
 
             <div className="flex items-center justify-end space-x-3 pt-2">

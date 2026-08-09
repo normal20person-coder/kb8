@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
 
     let label: string | null = null;
     let emergency_contact: string | null = null;
+    let blood_group: string | null = null;
+    let address: string | null = null;
     let expirationHours = 24;
 
     try {
@@ -25,6 +27,8 @@ export async function POST(req: NextRequest) {
       if (body) {
         if (body.label && typeof body.label === 'string') label = body.label.trim();
         if (body.emergency_contact && typeof body.emergency_contact === 'string') emergency_contact = body.emergency_contact.trim();
+        if (body.blood_group && typeof body.blood_group === 'string') blood_group = body.blood_group.trim();
+        if (body.address && typeof body.address === 'string') address = body.address.trim();
         if (body.expiration_hours && !isNaN(Number(body.expiration_hours))) {
           expirationHours = Math.max(1, Math.min(168, Number(body.expiration_hours)));
         }
@@ -51,6 +55,8 @@ export async function POST(req: NextRequest) {
           token: trackingToken,
           label,
           emergency_contact,
+          blood_group,
+          address,
           expires_at: expiresAt,
           active: true,
         },
