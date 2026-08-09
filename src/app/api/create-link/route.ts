@@ -40,7 +40,10 @@ export async function POST(req: NextRequest) {
 
     const expiresAt = new Date(Date.now() + expirationHours * 60 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabase
+    let data: unknown = null;
+    let error: { message: string } | null = null;
+
+    const fullInsert = await supabase
       .from('tracking_links')
       .insert([
         {
@@ -54,6 +57,28 @@ export async function POST(req: NextRequest) {
       ])
       .select()
       .single();
+
+    if (fullInsert.error && fullInsert.error.message?.includes('schema cache')) {
+      // Fallback insert if new columns have not been migrated in Supabase yet
+      const fallbackInsert = await supabase
+        .from('tracking_links')
+        .insert([
+          {
+            owner_id: user.id,
+            token: trackingToken,
+            expires_at: expiresAt,
+            active: true,
+          },
+        ])
+        .select()
+        .single();
+
+      data = fallbackInsert.data;
+      error = fallbackInsert.error;
+    } else {
+      data = fullInsert.data;
+      error = fullInsert.error;
+    }
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

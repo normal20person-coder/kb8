@@ -60,7 +60,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert new location record into location_updates
-    const { data: updateRecord, error: insertError } = await supabase
+    let updateRecord: { id: string } | null = null;
+    let insertError: { message: string } | null = null;
+
+    const fullInsert = await supabase
       .from('location_updates')
       .insert([
         {
@@ -78,9 +81,32 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
 
-    if (insertError) {
+    if (fullInsert.error && fullInsert.error.message?.includes('schema cache')) {
+      // Fallback insert for basic location tracking if new columns are not in PostgREST schema cache yet
+      const fallbackInsert = await supabase
+        .from('location_updates')
+        .insert([
+          {
+            token,
+            lat: latitude,
+            lng: longitude,
+            accuracy: accuracy !== undefined && !isNaN(Number(accuracy)) ? Number(accuracy) : null,
+            ts: ts && !isNaN(Number(ts)) ? Number(ts) : Date.now(),
+          },
+        ])
+        .select()
+        .single();
+
+      updateRecord = fallbackInsert.data;
+      insertError = fallbackInsert.error;
+    } else {
+      updateRecord = fullInsert.data;
+      insertError = fullInsert.error;
+    }
+
+    if (insertError || !updateRecord) {
       console.error('Error inserting location update:', insertError);
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+      return NextResponse.json({ error: insertError?.message || 'Failed to insert location update' }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, id: updateRecord.id });

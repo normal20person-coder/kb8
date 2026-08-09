@@ -66,16 +66,30 @@ function TrackContent() {
         return;
       }
 
-      const { data: link, error } = await supabase
+      let link: { token: string; active: boolean; expires_at: string; emergency_contact?: string | null } | null = null;
+
+      const { data: linkWithEmergency, error: initialError } = await supabase
         .from('tracking_links')
         .select('token, active, expires_at, emergency_contact')
         .eq('token', token)
         .single();
 
-      if (error || !link) {
-        setErrorMessage('Invalid tracking link or session does not exist.');
-        setLoading(false);
-        return;
+      if (initialError) {
+        // Fallback query if emergency_contact column is not in PostgREST schema cache yet
+        const { data: fallbackLink, error: fallbackError } = await supabase
+          .from('tracking_links')
+          .select('token, active, expires_at')
+          .eq('token', token)
+          .single();
+
+        if (fallbackError || !fallbackLink) {
+          setErrorMessage('Invalid tracking link or session does not exist.');
+          setLoading(false);
+          return;
+        }
+        link = fallbackLink;
+      } else {
+        link = linkWithEmergency;
       }
 
       if (!link.active) {

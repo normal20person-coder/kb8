@@ -105,21 +105,44 @@ function DashboardContent({ user }: { user: User }) {
       if (!viewError && viewData) {
         updateData = viewData as LocationPoint[];
       } else {
-        const { data: rawData } = await supabase
+        const { data: rawData, error: rawError } = await supabase
           .from('location_updates')
           .select('token, lat, lng, accuracy, speed, heading, battery_level, is_sos, ts, created_at')
           .in('token', tokens)
           .order('created_at', { ascending: false });
-        updateData = rawData as LocationPoint[];
+
+        if (rawError) {
+          const { data: fallbackRaw } = await supabase
+            .from('location_updates')
+            .select('token, lat, lng, accuracy, ts, created_at')
+            .in('token', tokens)
+            .order('created_at', { ascending: false });
+          updateData = (fallbackRaw || []) as LocationPoint[];
+        } else {
+          updateData = (rawData || []) as LocationPoint[];
+        }
       }
 
       // Fetch raw location update history (last 50 points per token) for breadcrumb polylines
-      const { data: historyData } = await supabase
+      let historyData: LocationPoint[] | null = null;
+      const { data: fullHistory, error: historyError } = await supabase
         .from('location_updates')
         .select('token, lat, lng, accuracy, speed, heading, battery_level, is_sos, ts, created_at')
         .in('token', tokens)
         .order('created_at', { ascending: true })
         .limit(200);
+
+      if (historyError) {
+        const { data: fallbackHist } = await supabase
+          .from('location_updates')
+          .select('token, lat, lng, accuracy, ts, created_at')
+          .in('token', tokens)
+          .order('created_at', { ascending: true })
+          .limit(200);
+        historyData = (fallbackHist || []) as LocationPoint[];
+      } else {
+        historyData = (fullHistory || []) as LocationPoint[];
+      }
 
       const historyMap: Record<string, LocationPoint[]> = {};
       if (historyData) {
@@ -226,7 +249,7 @@ function DashboardContent({ user }: { user: User }) {
     const expHours = Number(newExpirationHours) || 24;
     const expiresAt = new Date(Date.now() + expHours * 60 * 60 * 1000).toISOString();
 
-    const { error } = await supabase.from('tracking_links').insert([
+    let { error } = await supabase.from('tracking_links').insert([
       {
         owner_id: user.id,
         token: token,
@@ -236,6 +259,18 @@ function DashboardContent({ user }: { user: User }) {
         active: true,
       },
     ]);
+
+    if (error && error.message?.includes('schema cache')) {
+      const fallback = await supabase.from('tracking_links').insert([
+        {
+          owner_id: user.id,
+          token: token,
+          expires_at: expiresAt,
+          active: true,
+        },
+      ]);
+      error = fallback.error;
+    }
 
     if (error) {
       setErrorMsg(error.message);
